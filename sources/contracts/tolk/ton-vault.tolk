@@ -28,7 +28,8 @@ fun onInternalMessage(in: InMessage) {
                 in.senderAddress.isAddressOfAmmPool(
                     sortedAddresses.lower,
                     sortedAddresses.higher,
-                    storage.ammPoolCode
+                    storage.ammPoolCode,
+                    storage.liquidityDepositContractCode
                 )
             ) throw SENDER_SHOULD_BE_AMM_POOL;
 
@@ -95,13 +96,16 @@ fun onInternalMessage(in: InMessage) {
                         msg.destination.otherAmount
                     );
 
-                    val destination = calcLpDepositStateInit(
+                    val lpTokensReceiver = msg.lpTokensReceiver != null
+                         ? msg.lpTokensReceiver
+                         : in.senderAddress;
+
+                    val destination = calcLiquidityDepositStateInit(
                         sortedAddressesAndAmounts.lower,
                         sortedAddressesAndAmounts.higher,
                         sortedAddressesAndAmounts.lowerAmount,
                         sortedAddressesAndAmounts.higherAmount,
-                        msg.lpTokensReceiver != null ? msg.lpTokensReceiver : in.senderAddress,
-                        msg.destination.contractId,
+                        (lpTokensReceiver, msg.destination.contractId),
                         storage.liquidityDepositContractCode
                     );
 
@@ -110,6 +114,7 @@ fun onInternalMessage(in: InMessage) {
                             amount: msg.amountIn,
                             ammPoolCode: storage.ammPoolCode,
                             additionalParams: msg.additionalParams,
+                            liquidityDepositCode: storage.liquidityDepositContractCode,
                         },
                         bounce: false,
                         dest: destination,
@@ -126,6 +131,7 @@ fun onInternalMessage(in: InMessage) {
                         body: PartHasBeenDeposited {
                             amount: msg.amountIn,
                             ammPoolCode: storage.ammPoolCode,
+                            liquidityDepositCode: storage.liquidityDepositContractCode,
                             additionalParams: msg.additionalParams,
                         },
                         bounce: false,

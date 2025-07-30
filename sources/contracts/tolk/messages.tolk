@@ -114,14 +114,15 @@ struct (0xe7a3475f) PartHasBeenDeposited {
     amount: coins
     additionalParams: Cell<LpAdditionalParams>
     ammPoolCode: cell
+    liquidityDepositCode: cell
 }
 
 struct (0x642b7d07) NotifyPoolAboutLiquidityDeposit {
     lowerAmount: coins
     higherAmount: coins
     extra: Cell<LiquidityDepositExtraFields>
-    higherAdditionalParams: Cell<LpAdditionalParams>?
-    lowerAdditionalParams: Cell<LpAdditionalParams>?
+    higherAdditionalParams: Cell<LpAdditionalParams>
+    lowerAdditionalParams: Cell<LpAdditionalParams>
 }
 
 struct (0x2d8b123a) PayoutFromTonVault {

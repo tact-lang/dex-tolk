@@ -12,6 +12,7 @@ struct AmmPoolStorage {
     jettonContent: cell?
     // code for on-chain auth
     ammPoolCode: cell
+    liquidityDepositCode: cell
 }
 
 fun AmmPoolStorage.load() {
@@ -27,7 +28,12 @@ fun AmmPoolStorage.isAddressOneOfTheVaults(self, addr: address) {
     return self.lowerVault == addr || self.higherVault == addr;
 }
 
-fun calcAmmPoolStateInit(lowerVault: address, higherVault: address, ammPoolCode: cell): AutoDeployAddress {
+fun calcAmmPoolStateInit(
+    lowerVault: address,
+    higherVault: address,
+    ammPoolCode: cell,
+    liquidityDepositCode: cell,
+): AutoDeployAddress {
     return {
         workchain: BASECHAIN,
         stateInit: {
@@ -40,14 +46,21 @@ fun calcAmmPoolStateInit(lowerVault: address, higherVault: address, ammPoolCode:
                 totalSupply: 0,
                 jettonContent: null,
                 ammPoolCode,
+                liquidityDepositCode,
             }
                 .toCell(),
         },
     };
 }
 
-fun address.isAddressOfAmmPool(self, lowerVault: address, higherVault: address, ammPoolCode: cell) {
-    val ammPool = calcAmmPoolStateInit(lowerVault, higherVault, ammPoolCode);
+fun address.isAddressOfAmmPool(
+    self,
+    lowerVault: address,
+    higherVault: address,
+    ammPoolCode: cell,
+    liquidityDepositCode: cell,
+) {
+    val ammPool = calcAmmPoolStateInit(lowerVault, higherVault, ammPoolCode, liquidityDepositCode);
     return ammPool.addressMatches(self);
 }
 
@@ -66,15 +79,25 @@ struct LiquidityDepositStorage {
     higherAdditionalParams: Cell<LpAdditionalParams>?
 }
 
-fun calcLpDepositStateInit(
+type EitherLpExtraFields = Cell<LiquidityDepositExtraFields> | (address, uint64)
+
+fun calcLiquidityDepositStateInit(
     lowerVault: address,
     higherVault: address,
     lowerAmount: coins,
     higherAmount: coins,
-    lpTokensReceiver: address,
-    contractId: uint64,
+    lpExtraFields: EitherLpExtraFields,
     liquidityDepositCode: cell,
 ): AutoDeployAddress {
+    val extra = match (lpExtraFields) {
+        Cell<LiquidityDepositExtraFields> => lpExtraFields,
+        (address, uint64) => LiquidityDepositExtraFields {
+            lpTokensReceiver: lpExtraFields.0,
+            contractId: lpExtraFields.1,
+        }
+            .toCell(),
+    };
+
     return {
         workchain: BASECHAIN,
         stateInit: {
@@ -84,7 +107,7 @@ fun calcLpDepositStateInit(
                 higherVault,
                 lowerAmount,
                 higherAmount,
-                extra: LiquidityDepositExtraFields { contractId, lpTokensReceiver }.toCell(),
+                extra: extra,
                 isHigherSideFilled: false,
                 isLowerSideFilled: false,
                 higherAdditionalParams: null,
@@ -93,4 +116,24 @@ fun calcLpDepositStateInit(
                 .toCell(),
         },
     };
+}
+
+fun address.isAddressOfLiquidityDeposit(
+    self,
+    lowerVault: address,
+    higherVault: address,
+    lowerAmount: coins,
+    higherAmount: coins,
+    lpExtraFields: EitherLpExtraFields,
+    liquidityDepositCode: cell,
+) {
+    val liquidityDeposit = calcLiquidityDepositStateInit(
+        lowerVault,
+        higherVault,
+        lowerAmount,
+        higherAmount,
+        lpExtraFields,
+        liquidityDepositCode
+    );
+    return liquidityDeposit.addressMatches(self);
 }

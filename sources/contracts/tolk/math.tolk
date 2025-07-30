@@ -40,3 +40,31 @@ fun sortAddressesAndAmounts(a: address, b: address, aAmount: coins, bAmount: coi
         higherAmount: aAmount,
     };
 }
+
+@pure
+fun log2(num: int): int
+    asm "DUP 5 THROWIFNOT UBITSIZE DEC"
+
+@pure
+fun divc(x: int, y: int): int
+    asm "DIVC"
+
+@inline
+@pure
+fun sqrt(num: int): int {
+    if (num == 0) {
+        return 0;
+    }
+
+    val s = log2(num);
+
+    var x = (s == 1 ? (num - 1) / 2 + 1 : 1 << ((s + 1) / 2));
+    var q = 0;
+
+    do {
+        q = (divc(num, x) - x) / 2;
+        x += q;
+    } while (q != 0);
+
+    return x;
+}

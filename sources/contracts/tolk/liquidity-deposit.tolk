@@ -46,13 +46,14 @@ fun onInternalMessage(in: InMessage) {
                         lowerAmount: storage.lowerAmount,
                         higherAmount: storage.higherAmount,
                         extra: storage.extra,
-                        lowerAdditionalParams: storage.lowerAdditionalParams,
-                        higherAdditionalParams: storage.higherAdditionalParams,
+                        lowerAdditionalParams: storage.lowerAdditionalParams!,
+                        higherAdditionalParams: storage.higherAdditionalParams!,
                     },
                     dest: calcAmmPoolStateInit(
                         storage.lowerVault,
                         storage.higherVault,
-                        msg.ammPoolCode
+                        msg.ammPoolCode,
+                        msg.liquidityDepositCode
                     ),
                     bounce: false,
                     value: 0,
