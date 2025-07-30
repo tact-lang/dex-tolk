@@ -1,5 +1,4 @@
 import "@stdlib/gas-payments"
-import "./lp-jettons/lp-jettons-messages.tolk"
 import "errors"
 import "liquidity"
 import "math"
@@ -8,6 +7,7 @@ import "storage"
 import "swap"
 import "lp-jettons/errors"
 import "lp-jettons/lp-jetton-utils"
+import "lp-jettons/lp-jettons-messages.tolk"
 
 @pure
 @inline
@@ -111,37 +111,7 @@ fun onInternalMessage(in: InMessage) {
         SwapIn => {
             var storage = lazy AmmPoolStorage.load();
 
-            var incomingVault: address;
-            // TODO: match vs != null
-            match (msg.multihopInfo) {
-                Cell<MultihopInfo> => {
-                    val multihopInfo = msg.multihopInfo.load();
-
-                    // verify if sender is another pool
-                    assert (
-                        in.senderAddress.isAddressOfAmmPool(
-                            multihopInfo.lowerVault,
-                            multihopInfo.higherVault,
-                            storage.ammPoolCode,
-                            storage.liquidityDepositCode
-                        )
-                    ) throw MULTIHOP_SWAP_SENDER_MUST_BE_POOL;
-
-                    // verify that swap chain is consistent
-                    assert (
-                        storage.isAddressOneOfTheVaults(multihopInfo.outVault)
-                    ) throw MULTIHOP_SWAP_OUT_VAULT_MUST_BE_NEXT_POOL_VAULT;
-
-                    incomingVault = multihopInfo.outVault;
-                }
-                null => {
-                    assert (
-                        storage.isAddressOneOfTheVaults(in.senderAddress)
-                    ) throw SWAP_SENDER_MUST_BE_VAULT;
-
-                    incomingVault = in.senderAddress;
-                }
-            }
+            val incomingVault = getIncomingVault(msg.multihopInfo, in.senderAddress);
 
             // at this point we ensured that swap message is
             // indeed from one of the vaults for this pool

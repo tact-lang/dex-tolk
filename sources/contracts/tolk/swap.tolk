@@ -236,3 +236,40 @@ fun handleSwap(
 
     return (updatedInReserve, updatedOutReserve, ctx.isSwapFromHigherVault);
 }
+
+@inline
+fun getIncomingVault(multihopInfo: Cell<MultihopInfo>?, sender: address) {
+    val storage = lazy AmmPoolStorage.load();
+
+    var incomingVault: address;
+
+    match (multihopInfo) {
+        Cell<MultihopInfo> => {
+            val multihopInfo = multihopInfo.load();
+
+            // verify if sender is another pool
+            assert (
+                sender.isAddressOfAmmPool(
+                    multihopInfo.lowerVault,
+                    multihopInfo.higherVault,
+                    storage.ammPoolCode,
+                    storage.liquidityDepositCode
+                )
+            ) throw MULTIHOP_SWAP_SENDER_MUST_BE_POOL;
+
+            // verify that swap chain is consistent
+            assert (
+                storage.isAddressOneOfTheVaults(multihopInfo.outVault)
+            ) throw MULTIHOP_SWAP_OUT_VAULT_MUST_BE_NEXT_POOL_VAULT;
+
+            incomingVault = multihopInfo.outVault;
+        }
+        null => {
+            assert (storage.isAddressOneOfTheVaults(sender)) throw SWAP_SENDER_MUST_BE_VAULT;
+
+            incomingVault = sender;
+        }
+    }
+
+    return incomingVault;
+}
