@@ -1,153 +1,34 @@
+import "@stdlib/gas-payments"
+import "./lp-jettons/lp-jettons-messages.tolk"
 import "errors"
+import "liquidity"
 import "math"
 import "messages"
 import "storage"
 import "swap"
-
-struct LiquidityProvisioningResult {
-    updatedLowerReserve: coins
-    updatedHigherReserve: coins
-    lpTokensToMint: coins
-}
+import "lp-jettons/errors"
+import "lp-jettons/lp-jetton-utils"
 
 @pure
 @inline
-fun calcLpTokensAmountAfterFirstDeposit(
-    lowerAmount: coins,
-    higherAmount: coins,
-    lowerSideReserve: coins,
-    higherSideReserve: coins,
-    totalSupply: coins,
-) {
-    return min(
-        mulDivFloor(lowerAmount, totalSupply, lowerSideReserve - lowerAmount),
-        mulDivFloor(higherAmount, totalSupply, higherSideReserve - higherAmount)
-    );
+fun uint32.isTimeoutExceeded(self) {
+    return self > 0 && self < blockchain.now();
 }
 
-@pure
-fun handleReservesUpdate(
-    lowerAmount: coins,
-    higherAmount: coins,
-    lowerAdditionalParams: LpAdditionalParams,
-    higherAdditionalParams: LpAdditionalParams,
-    lpTokensReceiver: address,
-    inValue: coins,
-): LiquidityProvisioningResult {
-    val storage = lazy AmmPoolStorage.load();
+fun onBouncedMessage(in: InMessageBounced) {
+    in.bouncedBody.skipBouncedPrefix();
+    // process only mint bounces; on other messages, an exception will be thrown, it's okay
+    val msg = lazy LpJettonTransferInternal.fromSlice(in.bouncedBody);
 
-    if (storage.lowerSideReserve == 0) {
-        return {
-            updatedLowerReserve: lowerAmount,
-            updatedHigherReserve: higherAmount,
-            lpTokensToMint: sqrt(lowerAmount * higherAmount),
-        };
-    }
-
-    // [lower, higher] - reserves before current liquidity provisioning
-    // [lowerAmount, higherAmount] - incoming liquidity
-    // 
-    // constant product formula fixes invariant:
-    // 'lower * higher = k'
-    // 
-    // we want 'lower/higher == lowerAmount/higherAmount'
-    // and for that we need to balance either of sides
-    if (higherAmount * storage.lowerSideReserve > storage.higherSideReserve * lowerAmount) {
-        // 'balancedHigherAmount = lowerAmount * higher / lower'
-        val balancedHigherAmount: coins = mulDivFloor(
-            lowerAmount,
-            storage.higherSideReserve,
-            storage.lowerSideReserve
-        );
-
-        if (balancedHigherAmount < higherAdditionalParams.minAmountToDeposit) {
-            // TODO: fail lp
-            throw LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED
-        }
-
-        // refund higher lp excesses if we received more than we can accept
-        if (higherAmount > balancedHigherAmount) {
-            val liquidityExcessesRefundMsg = createMessage({
-                body: PayoutFromPool {
-                    otherVault: storage.lowerVault,
-                    amount: higherAmount - balancedHigherAmount,
-                    receiver: lpTokensReceiver,
-                    payloadToForward: higherAdditionalParams.payloadOnSuccess,
-                },
-                bounce: false,
-                dest: storage.higherVault,
-                value: getHalfOfTheMsgValue(inValue),
-            });
-
-            liquidityExcessesRefundMsg.send(SEND_MODE_REGULAR);
-        }
-
-        val updatedLowerReserve = storage.lowerSideReserve + lowerAmount;
-        val updatedHigherReserve = storage.higherSideReserve + balancedHigherAmount;
-
-        val lpTokensToMint = calcLpTokensAmountAfterFirstDeposit(
-            lowerAmount,
-            higherAmount,
-            updatedLowerReserve,
-            updatedHigherReserve,
-            storage.totalSupply
-        );
-
-        return {
-            updatedLowerReserve,
-            updatedHigherReserve,
-            lpTokensToMint,
-        };
-    }
-
-    // 'balancedLowerAmount = higherAmount * lower / higher'
-    val balancedLowerAmount: coins = mulDivFloor(
-        higherAmount,
-        storage.lowerSideReserve,
-        storage.higherSideReserve
-    );
-
-    if (balancedLowerAmount < lowerAdditionalParams.minAmountToDeposit) {
-        // TODO: fail lp
-        throw LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED
-    }
-
-    // refund lower lp excesses if we received more than we can accept
-    if (lowerAmount > balancedLowerAmount) {
-        val liquidityExcessesRefundMsg = createMessage({
-            body: PayoutFromPool {
-                otherVault: storage.higherVault,
-                amount: lowerAmount - balancedLowerAmount,
-                receiver: lpTokensReceiver,
-                payloadToForward: lowerAdditionalParams.payloadOnSuccess,
-            },
-            bounce: false,
-            dest: storage.lowerVault,
-            value: getHalfOfTheMsgValue(inValue),
-        });
-
-        liquidityExcessesRefundMsg.send(SEND_MODE_REGULAR);
-    }
-
-    val updatedLowerReserve = storage.lowerSideReserve + balancedLowerAmount;
-    val updatedHigherReserve = storage.higherSideReserve + higherAmount;
-
-    val lpTokensToMint = calcLpTokensAmountAfterFirstDeposit(
-        lowerAmount,
-        higherAmount,
-        updatedLowerReserve,
-        updatedHigherReserve,
-        storage.totalSupply
-    );
-
-    return {
-        updatedLowerReserve,
-        updatedHigherReserve,
-        lpTokensToMint,
-    };
+    var storage = lazy AmmPoolStorage.load();
+    storage.totalSupply -= msg.jettonAmount;
+    storage.save();
 }
 
-type AllowedMessages = NotifyPoolAboutLiquidityDeposit | SwapIn
+type AllowedMessages =
+    | NotifyPoolAboutLiquidityDeposit
+    | SwapIn
+    | LiquidityWithdrawViaBurnNotification
 
 fun onInternalMessage(in: InMessage) {
     val msg = lazy AllowedMessages.fromSlice(in.body);
@@ -174,12 +55,13 @@ fun onInternalMessage(in: InMessage) {
 
             val extra = lazy msg.extra.load();
 
-            assert (
-                blockchain.now() >
-                max(lowerAdditionalParams.lpTimeout, higherAdditionalParams.lpTimeout)
-            ) throw LIQUIDITY_PROVISIONING_TIMEOUT_EXCEEDED;
+            val maxLpTimeout: uint32 = max(
+                lowerAdditionalParams.lpTimeout,
+                higherAdditionalParams.lpTimeout
+            );
+            assert (maxLpTimeout.isTimeoutExceeded()) throw LIQUIDITY_PROVISIONING_TIMEOUT_EXCEEDED;
 
-            val liqProvisioningResult = handleReservesUpdate(
+            val reserveUpdates = handleReservesUpdate(
                 msg.lowerAmount,
                 msg.higherAmount,
                 lowerAdditionalParams,
@@ -189,14 +71,42 @@ fun onInternalMessage(in: InMessage) {
             );
 
             // update reserves
-            storage.lowerSideReserve = liqProvisioningResult.updatedLowerReserve;
-            storage.higherSideReserve = liqProvisioningResult.updatedHigherReserve;
+            storage.lowerSideReserve = reserveUpdates.updatedLowerReserve;
+            storage.higherSideReserve = reserveUpdates.updatedHigherReserve;
 
-            // update balance
-            storage.totalSupply += liqProvisioningResult.lpTokensToMint;
+            // update total lp amount
+            storage.totalSupply += reserveUpdates.lpTokensToMint;
+            storage.save();
 
             // Mint LP tokens, amm pool acts as the jetton minter for lp jettons
-            storage.save();
+            val successForwarsPayload = createSuccessfulForwardPayload(
+                lowerAdditionalParams.payloadOnSuccess,
+                higherAdditionalParams.payloadOnSuccess
+            );
+
+            val lpJettonMintMsg = createMessage({
+                body: LpJettonTransferInternal {
+                    queryId: 0,
+                    jettonAmount: reserveUpdates.lpTokensToMint,
+                    transferInitiator: contract.getAddress(),
+                    sendExcessesTo: extra.lpTokensReceiver,
+                    sendAllTonsInNotifyFlag: true,
+                    forwardTonAmount: 0,
+                    forwardPayload: successForwarsPayload,
+                },
+                // actually this is the only message in whole T-Dex
+                // that is send as bounceable, since we handle it
+                bounce: true,
+                dest: calcLpJettonWalletStateInit(
+                    extra.lpTokensReceiver,
+                    contract.getAddress(),
+                    // TODO: jetton wallet code
+                    storage.ammPoolCode
+                ),
+                value: 0,
+            });
+
+            lpJettonMintMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
         }
         SwapIn => {
             var storage = lazy AmmPoolStorage.load();
@@ -247,7 +157,7 @@ fun onInternalMessage(in: InMessage) {
                 throw NO_LIQUIDITY_IN_POOL
             }
 
-            if (swap.parameters.timeout > 0 && swap.parameters.timeout < blockchain.now()) {
+            if (swap.parameters.timeout.isTimeoutExceeded()) {
                 returnFunds(
                     incomingVault,
                     msg.receiver,
@@ -275,12 +185,74 @@ fun onInternalMessage(in: InMessage) {
 
             storage.save();
         }
+        LiquidityWithdrawViaBurnNotification => {
+            var storage = lazy AmmPoolStorage.load();
+
+            // TODO: jetton wallet code
+            assert (
+                in.senderAddress.isAddressOfLpJettonWallet(
+                    msg.burnInitiator,
+                    contract.getAddress(),
+                    storage.ammPoolCode
+                )
+            ) throw ERROR_NOT_VALID_WALLET;
+
+            val withdrawalParameters = msg.parameters.load();
+            assert (
+                withdrawalParameters.timeout.isTimeoutExceeded()
+            ) throw LIQUIDITY_WITHDRAWAL_TIMEOUT_EXCEEDED;
+
+            val (lowerAmountOut, higherAmountOut) = calcWithdrawalAmounts(
+                msg.jettonAmount,
+                withdrawalParameters
+            );
+
+            storage.totalSupply -= msg.jettonAmount;
+            storage.lowerSideReserve -= lowerAmountOut;
+            storage.higherSideReserve -= higherAmountOut;
+
+            storage.save();
+
+            // Preserve original balance (more, if we have storage debt)
+            reserveToncoinsOnBalance(
+                getGasConsumedAtTheMoment(),
+                RESERVE_MODE_INCREASE_BY_ORIGINAL_BALANCE | RESERVE_MODE_EXACT_AMOUNT
+            );
+
+            val payoutFromLowerVaultMsg = createMessage({
+                body: PayoutFromPool {
+                    amount: lowerAmountOut,
+                    otherVault: storage.higherVault,
+                    payloadToForward: withdrawalParameters.liquidityWithdrawPayload,
+                    receiver: withdrawalParameters.receiver,
+                },
+                bounce: false,
+                dest: storage.lowerVault,
+                value: getHalfOfTheMsgValue(in.valueCoins),
+            });
+            payoutFromLowerVaultMsg.send(SEND_MODE_BOUNCE_ON_ACTION_FAIL | SEND_MODE_REGULAR);
+
+            val payoutFromHigherVaultMsg = createMessage({
+                body: PayoutFromPool {
+                    amount: higherAmountOut,
+                    otherVault: storage.lowerVault,
+                    payloadToForward: withdrawalParameters.liquidityWithdrawPayload,
+                    receiver: withdrawalParameters.receiver,
+                },
+                bounce: false,
+                dest: storage.higherVault,
+                value: 0,
+            });
+            payoutFromHigherVaultMsg.send(SEND_MODE_BOUNCE_ON_ACTION_FAIL |
+            SEND_MODE_CARRY_ALL_BALANCE);
+        }
     }
 }
 
 // get methdos
 type VaultsWithReserves = SortedAddressesAndAmounts
 
+// pool get methods
 get fun vaultsAndReserves(): VaultsWithReserves {
     val storage = lazy AmmPoolStorage.load();
     return {
@@ -314,12 +286,44 @@ get fun expectedIn(inVault: address, exactOutAmount: coins) {
     assert (storage.isAddressOneOfTheVaults(inVault)) throw MSG_NOT_FROM_VAULTS;
 
     val ctx = storage.getSwapContext(inVault);
-
     assert (ctx.inReserve != 0 && ctx.outReserve != 0) throw NO_LIQUIDITY_IN_POOL;
 
     val updatedOutReserve = ctx.outReserve - exactOutAmount;
-
     assert (updatedOutReserve > 0) throw INSUFFICIENT_RESERVES_FOR_EXACT_OUT_VALUE;
 
     return calcRequiredAmountInWithPoolFeeApplied(updatedOutReserve, ctx.inReserve, exactOutAmount);
+}
+
+// minter get methods
+struct JettonDataReply {
+    totalSupply: int
+    mintable: bool
+    adminAddress: address
+    jettonContent: cell
+    jettonWalletCode: cell
+}
+
+get fun get_jetton_data(): JettonDataReply {
+    val storage = lazy AmmPoolStorage.load();
+
+    return {
+        totalSupply: storage.totalSupply,
+        mintable: true,
+        adminAddress: createAddressNone(),
+        jettonContent: createEmptyCell(),
+        // TODO: jetton wallet code
+        jettonWalletCode: storage.ammPoolCode,
+    };
+}
+
+get fun get_wallet_address(ownerAddress: address): address {
+    val storage = lazy AmmPoolStorage.load();
+
+    val addrBuilt = buildAddressOfLpJettonWallet(
+        ownerAddress,
+        contract.getAddress(),
+        // TODO: jetton wallet code
+        storage.ammPoolCode
+    );
+    return address.fromValidBuilder(addrBuilt);
 }

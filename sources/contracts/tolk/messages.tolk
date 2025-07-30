@@ -117,6 +117,8 @@ struct (0xe7a3475f) PartHasBeenDeposited {
     liquidityDepositCode: cell
 }
 
+// We are using USDT-like mint opcode for liquidity deposit
+// So this operation will be nicely displayed in Tonviewer
 struct (0x642b7d07) NotifyPoolAboutLiquidityDeposit {
     lowerAmount: coins
     higherAmount: coins
