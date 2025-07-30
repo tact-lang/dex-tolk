@@ -14,6 +14,19 @@ struct AmmPoolStorage {
     ammPoolCode: cell
 }
 
+fun AmmPoolStorage.load() {
+    return AmmPoolStorage.fromCell(contract.getData());
+}
+
+fun AmmPoolStorage.save(self) {
+    contract.setData(self.toCell());
+}
+
+@pure
+fun AmmPoolStorage.isAddressOneOfTheVaults(self, addr: address) {
+    return self.lowerVault == addr || self.higherVault == addr;
+}
+
 fun calcAmmPoolStateInit(lowerVault: address, higherVault: address, ammPoolCode: cell): AutoDeployAddress {
     return {
         workchain: BASECHAIN,
