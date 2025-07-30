@@ -60,6 +60,32 @@ fun AmmPoolStorage.getSwapContext(self, incomingVault: address): SwapContext {
     }
 }
 
+fun returnFunds(incomingVault: address, receiver: address, amount: coins, payloadOnFailure: cell?) {
+    val storage = lazy AmmPoolStorage.load();
+    val ctx = storage.getSwapContext(incomingVault);
+
+    val refundMsg = createMessage({
+        body: PayoutFromPool {
+            amount,
+            otherVault: ctx.outVault,
+            receiver,
+            payloadToForward: payloadOnFailure,
+        },
+        bounce: false,
+        dest: ctx.inVault,
+        value: 0,
+    });
+
+    refundMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+    // commit since we want to save refund action before throw
+    commitContractDataAndActions();
+}
+
+// function that handles swap math and returns updated reserves;
+// before calling it, we should verify that:
+//     - swap request is from one the vaults
+//     - pool has not null reserves
+//     - swap timeout has not exceeded
 fun handleSwap(
     swap: Swap,
     inAmount: coins,
@@ -94,7 +120,7 @@ fun handleSwap(
             val amountOut = ctx.outReserve - updatedOutReserve;
 
             if (amountOut < swap.swapInfo.minAmountOut) {
-                // TODO: return funds
+                returnFunds(incomingVault, receiver, inAmount, swap.parameters.payloadOnFailure);
                 throw AMOUNT_OUT_IS_LESS_THAN_LIMIT
             }
 
@@ -150,7 +176,7 @@ fun handleSwap(
             updatedOutReserve = ctx.outReserve - swap.swapInfo.exactOutAmount;
 
             if (updatedOutReserve <= 0) {
-                // TODO: return funds
+                returnFunds(incomingVault, receiver, inAmount, swap.parameters.payloadOnFailure);
                 throw INSUFFICIENT_RESERVES_FOR_EXACT_OUT_VALUE
             }
 
@@ -163,7 +189,7 @@ fun handleSwap(
             );
 
             if (requiredAmountInWithPoolFeeApplied > inAmount) {
-                // TODO: return funds
+                returnFunds(incomingVault, receiver, inAmount, swap.parameters.payloadOnFailure);
                 throw INSUFFICIENT_IN_AMOUNT_FOR_EXACT_OUT_VALUE
             }
 
