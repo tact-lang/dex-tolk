@@ -10,6 +10,8 @@ struct AmmPoolStorage {
     // lp tokens fields
     totalSupply: coins
     jettonContent: cell?
+    // code for on-chain auth
+    ammPoolCode: cell
 }
 
 fun calcAmmPoolStateInit(lowerVault: address, higherVault: address, ammPoolCode: cell): AutoDeployAddress {
@@ -24,6 +26,7 @@ fun calcAmmPoolStateInit(lowerVault: address, higherVault: address, ammPoolCode:
                 higherSideReserve: 0,
                 totalSupply: 0,
                 jettonContent: null,
+                ammPoolCode,
             }
                 .toCell(),
         },

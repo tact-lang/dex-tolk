@@ -14,28 +14,33 @@ struct SwapStep {
 struct ExactOutSwap {
     cashbackAddress: address?
     exactOutAmount: coins
-    timeout: uint32
-    payloadOnSuccess: cell?
-    payloadOnFailure: cell?
 }
 
 struct ExactInSwap {
     minAmountOut: coins
-    timeout: uint32
-    payloadOnSuccess: cell?
-    payloadOnFailure: cell?
     nextStep: Cell<SwapStep>?
 }
 
-type Swap = ExactOutSwap | ExactInSwap
+struct SwapParameters {
+    timeout: uint32
+    payloadOnSuccess: cell?
+    payloadOnFailure: cell?
+}
+
+type SwapInfo = ExactOutSwap | ExactInSwap
+
+struct Swap {
+    swapInfo: SwapInfo
+    parameters: SwapParameters
+}
 
 fun Swap.getNumberOfHops(self): int {
-    match (self) {
+    match (self.swapInfo) {
         ExactOutSwap => {
             return 1;
         }
         ExactInSwap => {
-            return self.nextStep.depth() + 1;
+            return self.swapInfo.nextStep.depth() + 1;
         }
     }
 }
@@ -47,8 +52,8 @@ struct SwapRequest {
 }
 
 struct MultihopInfo {
-    leftVault: address
-    rightVault: address
+    lowerVault: address
+    higherVault: address
     outVault: address
 }
 
