@@ -253,7 +253,8 @@ fun getIncomingVault(multihopInfo: Cell<MultihopInfo>?, sender: address) {
                     multihopInfo.lowerVault,
                     multihopInfo.higherVault,
                     storage.ammPoolCode,
-                    storage.liquidityDepositCode
+                    storage.liquidityDepositCode,
+                    storage.jettonWalletCode
                 )
             ) throw MULTIHOP_SWAP_SENDER_MUST_BE_POOL;
 

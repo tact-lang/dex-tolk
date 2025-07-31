@@ -13,6 +13,7 @@ struct AmmPoolStorage {
     // code for on-chain auth
     ammPoolCode: cell
     liquidityDepositCode: cell
+    jettonWalletCode: cell
 }
 
 fun AmmPoolStorage.load() {
@@ -33,6 +34,7 @@ fun calcAmmPoolStateInit(
     higherVault: address,
     ammPoolCode: cell,
     liquidityDepositCode: cell,
+    jettonWalletCode: cell,
 ): AutoDeployAddress {
     return {
         workchain: BASECHAIN,
@@ -47,6 +49,7 @@ fun calcAmmPoolStateInit(
                 jettonContent: null,
                 ammPoolCode,
                 liquidityDepositCode,
+                jettonWalletCode,
             }
                 .toCell(),
         },
@@ -59,8 +62,15 @@ fun address.isAddressOfAmmPool(
     higherVault: address,
     ammPoolCode: cell,
     liquidityDepositCode: cell,
+    jettonWalletCode: cell,
 ) {
-    val ammPool = calcAmmPoolStateInit(lowerVault, higherVault, ammPoolCode, liquidityDepositCode);
+    val ammPool = calcAmmPoolStateInit(
+        lowerVault,
+        higherVault,
+        ammPoolCode,
+        liquidityDepositCode,
+        jettonWalletCode
+    );
     return ammPool.addressMatches(self);
 }
 

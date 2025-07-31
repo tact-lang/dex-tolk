@@ -115,6 +115,7 @@ struct (0xe7a3475f) PartHasBeenDeposited {
     additionalParams: Cell<LpAdditionalParams>
     ammPoolCode: cell
     liquidityDepositCode: cell
+    jettonWalletCode: cell
 }
 
 // We are using USDT-like mint opcode for liquidity deposit

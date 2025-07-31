@@ -100,8 +100,7 @@ fun onInternalMessage(in: InMessage) {
                 dest: calcLpJettonWalletStateInit(
                     extra.lpTokensReceiver,
                     contract.getAddress(),
-                    // TODO: jetton wallet code
-                    storage.ammPoolCode
+                    storage.jettonWalletCode
                 ),
                 value: 0,
             });
@@ -158,12 +157,11 @@ fun onInternalMessage(in: InMessage) {
         LiquidityWithdrawViaBurnNotification => {
             var storage = lazy AmmPoolStorage.load();
 
-            // TODO: jetton wallet code
             assert (
                 in.senderAddress.isAddressOfLpJettonWallet(
                     msg.burnInitiator,
                     contract.getAddress(),
-                    storage.ammPoolCode
+                    storage.jettonWalletCode
                 )
             ) throw ERROR_NOT_VALID_WALLET;
 
@@ -281,8 +279,7 @@ get fun get_jetton_data(): JettonDataReply {
         mintable: true,
         adminAddress: createAddressNone(),
         jettonContent: createEmptyCell(),
-        // TODO: jetton wallet code
-        jettonWalletCode: storage.ammPoolCode,
+        jettonWalletCode: storage.jettonWalletCode,
     };
 }
 
@@ -292,8 +289,7 @@ get fun get_wallet_address(ownerAddress: address): address {
     val addrBuilt = buildAddressOfLpJettonWallet(
         ownerAddress,
         contract.getAddress(),
-        // TODO: jetton wallet code
-        storage.ammPoolCode
+        storage.jettonWalletCode
     );
     return address.fromValidBuilder(addrBuilt);
 }

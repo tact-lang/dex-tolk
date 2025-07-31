@@ -6,6 +6,7 @@ import "storage"
 struct TonVaultStorage {
     ammPoolCode: cell
     liquidityDepositContractCode: cell
+    jettonWalletCode: cell
 }
 
 // actually we don't even need Storage.load for this contract
@@ -29,7 +30,8 @@ fun onInternalMessage(in: InMessage) {
                     sortedAddresses.lower,
                     sortedAddresses.higher,
                     storage.ammPoolCode,
-                    storage.liquidityDepositContractCode
+                    storage.liquidityDepositContractCode,
+                    storage.jettonWalletCode
                 )
             ) throw SENDER_SHOULD_BE_AMM_POOL;
 
@@ -115,6 +117,7 @@ fun onInternalMessage(in: InMessage) {
                             ammPoolCode: storage.ammPoolCode,
                             additionalParams: msg.additionalParams,
                             liquidityDepositCode: storage.liquidityDepositContractCode,
+                            jettonWalletCode: storage.jettonWalletCode,
                         },
                         bounce: false,
                         dest: destination,
@@ -130,9 +133,10 @@ fun onInternalMessage(in: InMessage) {
                     val liquidityDepositedyMsg = createMessage({
                         body: PartHasBeenDeposited {
                             amount: msg.amountIn,
-                            ammPoolCode: storage.ammPoolCode,
-                            liquidityDepositCode: storage.liquidityDepositContractCode,
                             additionalParams: msg.additionalParams,
+                            liquidityDepositCode: storage.liquidityDepositContractCode,
+                            ammPoolCode: storage.ammPoolCode,
+                            jettonWalletCode: storage.jettonWalletCode,
                         },
                         bounce: false,
                         dest: msg.destination,

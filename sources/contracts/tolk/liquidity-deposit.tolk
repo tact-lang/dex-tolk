@@ -53,7 +53,8 @@ fun onInternalMessage(in: InMessage) {
                         storage.lowerVault,
                         storage.higherVault,
                         msg.ammPoolCode,
-                        msg.liquidityDepositCode
+                        msg.liquidityDepositCode,
+                        msg.jettonWalletCode
                     ),
                     bounce: false,
                     value: 0,
