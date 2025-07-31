@@ -49,6 +49,7 @@ fun onInternalMessage(in: InMessage) {
                         lowerAdditionalParams: storage.lowerAdditionalParams!,
                         higherAdditionalParams: storage.higherAdditionalParams!,
                     },
+                    // TODO: add option to skip deploy and just message to address here
                     dest: calcAmmPoolStateInit(
                         storage.lowerVault,
                         storage.higherVault,

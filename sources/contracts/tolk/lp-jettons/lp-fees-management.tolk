@@ -1,5 +1,5 @@
 import "@stdlib/gas-payments"
-import "errors"
+import "lp-errors"
 import "sharding"
 
 // Storage costs

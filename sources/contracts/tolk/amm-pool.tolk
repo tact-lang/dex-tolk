@@ -5,7 +5,7 @@ import "math"
 import "messages"
 import "storage"
 import "swap"
-import "lp-jettons/errors"
+import "lp-jettons/lp-errors"
 import "lp-jettons/lp-jetton-utils"
 import "lp-jettons/lp-jettons-messages.tolk"
 

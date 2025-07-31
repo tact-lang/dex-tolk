@@ -1,14 +1,14 @@
 import "@stdlib/gas-payments"
-import "errors"
-import "fees-management"
+import "lp-errors"
+import "lp-fees-management"
 import "lp-jetton-utils"
 import "lp-jettons-messages"
 import "sharding"
-import "storage"
+import "lp-storage"
 
-type AllowedMessageToWallet = AskToTransfer | AskToBurn | LpJettonTransferInternal | TopUpTons
+type AllowedMessageToWallet = AskToTransfer | LPWithdrawViaJettonBurn | LpJettonTransferInternal
 
-type BounceOpToHandle = LpJettonTransferInternal | BurnNotificationForMinter
+type BounceOpToHandle = LpJettonTransferInternal | LiquidityWithdrawViaBurnNotification
 
 fun onBouncedMessage(in: InMessageBounced) {
     in.bouncedBody.skipBouncedPrefix();
@@ -16,7 +16,7 @@ fun onBouncedMessage(in: InMessageBounced) {
     val msg = lazy BounceOpToHandle.fromSlice(in.bouncedBody);
     val restoreAmount = match (msg) {
         LpJettonTransferInternal => msg.jettonAmount, // safe to fetch jettonAmount, because
-        BurnNotificationForMinter => msg.jettonAmount, // it's in the beginning of a message
+        LiquidityWithdrawViaBurnNotification => msg.jettonAmount, // it's in the beginning of a message
     };
 
     var storage = lazy WalletStorage.load();
@@ -114,7 +114,7 @@ fun onInternalMessage(in: InMessage) {
             SEND_MODE_BOUNCE_ON_ACTION_FAIL);
         }
 
-        AskToBurn => {
+        LPWithdrawViaJettonBurn => {
             checkAmountIsEnoughToBurn(in.valueCoins);
 
             var storage = lazy WalletStorage.load();
@@ -127,19 +127,16 @@ fun onInternalMessage(in: InMessage) {
                 bounce: true,
                 dest: storage.minterAddress,
                 value: 0,
-                body: BurnNotificationForMinter {
+                body: LiquidityWithdrawViaBurnNotification {
                     queryId: msg.queryId,
                     jettonAmount: msg.jettonAmount,
                     burnInitiator: storage.ownerAddress,
                     sendExcessesTo: msg.sendExcessesTo,
+                    parameters: msg.parameters,
                 },
             });
             notifyMinterMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
             SEND_MODE_BOUNCE_ON_ACTION_FAIL);
-        }
-
-        TopUpTons => {
-            // just accept tons
         }
 
         else => throw 0xFFFF,

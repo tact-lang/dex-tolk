@@ -1,5 +1,5 @@
 import "sharding"
-import "storage"
+import "lp-storage"
 
 fun calcLpJettonWalletStateInit(
     ownerAddress: address,

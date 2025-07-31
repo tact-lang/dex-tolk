@@ -1,4 +1,4 @@
-import "storage"
+import "lp-storage"
 
 type ForwardPayloadRemainder = RemainingBitsAndRefs
 
@@ -41,11 +41,11 @@ struct LiquidityWithdrawParameters {
     liquidityWithdrawPayload: cell?
 }
 
-struct (0x595f07bc) AskToBurn {
+struct (0x595f07bc) LPWithdrawViaJettonBurn {
     queryId: uint64
     jettonAmount: coins
     sendExcessesTo: address
-    customPayload: cell?
+    parameters: Cell<LiquidityWithdrawParameters>
 }
 
 struct (0x7bdd97de) LiquidityWithdrawViaBurnNotification {
