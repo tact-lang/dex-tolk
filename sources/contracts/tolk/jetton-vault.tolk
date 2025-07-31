@@ -1,6 +1,7 @@
 import "errors"
 import "math"
 import "messages"
+import "proof"
 import "storage"
 import "lp-jettons/lp-jettons-messages.tolk"
 
@@ -17,6 +18,10 @@ fun JettonVaultStorage.load() {
     return JettonVaultStorage.fromCell(contract.getData());
 }
 
+fun JettonVaultStorage.save(self) {
+    contract.setData(self.toCell());
+}
+
 @pure
 @inline
 fun address.isOnBasechain(self) {
@@ -25,14 +30,13 @@ fun address.isOnBasechain(self) {
     return self.getWorkchain() == BASECHAIN;
 }
 
-fun checkProof(proof: JettonVaultProof) {
-    return true;
-}
+fun createSliceWithOneZeroBit(): slice
+    asm "b{0} PUSHSLICE"
 
 type AllowedMessagesForJettonVault = JettonTransferNotificationWithVaultAction | PayoutFromPool
 
 fun onInternalMessage(in: InMessage) {
-    val storage = JettonVaultStorage.load();
+    var storage = JettonVaultStorage.load();
 
     val msg = lazy AllowedMessagesForJettonVault.fromSlice(in.body);
 
@@ -40,7 +44,35 @@ fun onInternalMessage(in: InMessage) {
         JettonTransferNotificationWithVaultAction => {
             if (storage.jettonWallet == null) {
                 // TODO: handle proofs
-                checkProof(msg.jettonVaultPayload.proof);
+                try {
+                    checkProof(msg.jettonVaultPayload.proof, storage.jettonMaster, in.senderAddress);
+                } catch (error) {
+                    // refund if error
+                    val refundMsg = createMessage({
+                        body: AskToTransfer {
+                            queryId: msg.queryId,
+                            jettonAmount: msg.jettonAmount,
+                            transferRecipient: msg.transferInitiator,
+                            sendExcessesTo: msg.transferInitiator,
+                            customPayload: null,
+                            forwardTonAmount: 1,
+                            forwardPayload: createSliceWithOneZeroBit(),
+                        },
+                        bounce: false,
+                        dest: in.senderAddress,
+                        value: 0,
+                    });
+                    refundMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
+                    SEND_MODE_IGNORE_ERRORS);
+
+                    commitContractDataAndActions();
+                    throw error
+                }
+
+                // if we passed the proof check, we can save new address
+                storage.jettonWallet = in.senderAddress;
+                storage.save();
+                commitContractDataAndActions();
             }
 
             if (in.senderAddress != storage.jettonWallet!) {
@@ -104,6 +136,7 @@ fun onInternalMessage(in: InMessage) {
     }
 }
 
+// TODO: inline_ref?
 fun handleAction(
     actionCell: Cell<JettonVaultAction>,
     jettonAmount: coins,
