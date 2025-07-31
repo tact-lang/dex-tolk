@@ -5,6 +5,7 @@ export const DEX_SOURCES = {
     "liquidity-deposit": "sources/contracts/tolk/liquidity-deposit.tolk",
     "amm-pool": "sources/contracts/tolk/amm-pool.tolk",
     "lp-jetton-wallet": "sources/contracts/tolk/lp-jettons/lp-jetton-wallet.tolk",
+    "jetton-vault": "sources/contracts/tolk/jetton-vault.tolk",
 }
 
 export type ContractName = keyof typeof DEX_SOURCES

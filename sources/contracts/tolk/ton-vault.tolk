@@ -9,7 +9,7 @@ struct TonVaultStorage {
     jettonWalletCode: cell
 }
 
-// actually we don't even need Storage.load for this contract
+// actually we don't even need Storage.save for this contract
 fun TonVaultStorage.load() {
     return TonVaultStorage.fromCell(contract.getData());
 }
@@ -88,6 +88,8 @@ fun onInternalMessage(in: InMessage) {
                 RESERVE_MODE_BOUNCE_ON_ACTION_FAIL
             );
 
+            var destination: address | AutoDeployAddress;
+
             match (msg.destination) {
                 LiquidityDepositWithInitData => {
                     val storage = lazy TonVaultStorage.load();
@@ -102,7 +104,7 @@ fun onInternalMessage(in: InMessage) {
                          ? msg.lpTokensReceiver
                          : in.senderAddress;
 
-                    val destination = calcLiquidityDepositStateInit(
+                    destination = calcLiquidityDepositStateInit(
                         sortedAddressesAndAmounts.lower,
                         sortedAddressesAndAmounts.higher,
                         sortedAddressesAndAmounts.lowerAmount,
@@ -110,44 +112,30 @@ fun onInternalMessage(in: InMessage) {
                         (lpTokensReceiver, msg.destination.contractId),
                         storage.liquidityDepositContractCode
                     );
-
-                    val liquidityDepositedWithDeployMsg = createMessage({
-                        body: PartHasBeenDeposited {
-                            amount: msg.amountIn,
-                            ammPoolCode: storage.ammPoolCode,
-                            additionalParams: msg.additionalParams,
-                            liquidityDepositCode: storage.liquidityDepositContractCode,
-                            jettonWalletCode: storage.jettonWalletCode,
-                        },
-                        bounce: false,
-                        dest: destination,
-                        value: 0,
-                    });
-
-                    liquidityDepositedWithDeployMsg.send(SEND_MODE_CARRY_ALL_BALANCE |
-                    SEND_MODE_BOUNCE_ON_ACTION_FAIL);
                 }
                 LiquidityDepositAddress => {
-                    val storage = lazy TonVaultStorage.load();
-
-                    val liquidityDepositedyMsg = createMessage({
-                        body: PartHasBeenDeposited {
-                            amount: msg.amountIn,
-                            additionalParams: msg.additionalParams,
-                            liquidityDepositCode: storage.liquidityDepositContractCode,
-                            ammPoolCode: storage.ammPoolCode,
-                            jettonWalletCode: storage.jettonWalletCode,
-                        },
-                        bounce: false,
-                        dest: msg.destination,
-                        value: 0,
-                    });
-
-                    liquidityDepositedyMsg.send(SEND_MODE_CARRY_ALL_BALANCE |
-                    SEND_MODE_BOUNCE_ON_ACTION_FAIL);
+                    destination = msg.destination;
                 }
             }
             ;
+
+            val storage = lazy TonVaultStorage.load();
+
+            val liquidityDepositNotifyMsg = createMessage({
+                body: PartHasBeenDeposited {
+                    amount: msg.amountIn,
+                    additionalParams: msg.additionalParams,
+                    liquidityDepositCode: storage.liquidityDepositContractCode,
+                    ammPoolCode: storage.ammPoolCode,
+                    jettonWalletCode: storage.jettonWalletCode,
+                },
+                bounce: false,
+                dest: destination,
+                value: 0,
+            });
+
+            liquidityDepositNotifyMsg.send(SEND_MODE_CARRY_ALL_BALANCE |
+            SEND_MODE_BOUNCE_ON_ACTION_FAIL);
         }
     }
 }

@@ -97,12 +97,6 @@ struct LiquidityDepositExtraFields {
     contractId: uint64
 }
 
-struct LpDepositPart {
-    destination: LiquidityDepositDestination
-    additionalParams: LpAdditionalParams
-    lpTokensReceiver: address?
-}
-
 struct (0x1b434676) AddLiquidityPartTon {
     amountIn: coins
     destination: LiquidityDepositDestination
@@ -130,4 +124,55 @@ struct (0x642b7d07) NotifyPoolAboutLiquidityDeposit {
 
 struct (0x2d8b123a) PayoutFromTonVault {
     body: cell?
+}
+
+// jetton vault messages
+struct (0xbfa68001) SwapRequestAction {
+    request: SwapRequest
+}
+
+struct (0x64c08bfc) LpDepositPartAction {
+    destination: LiquidityDepositDestination
+    additionalParams: Cell<LpAdditionalParams>
+    lpTokensReceiver: address?
+}
+
+type JettonVaultAction = SwapRequestAction | LpDepositPartAction
+
+struct (0x0) NoProof {}
+
+struct (0x1) MinterDiscoveryProof {}
+
+struct (0x2) OnchainGetterProof {
+    jettonMinterStateInit: StateInit
+}
+
+struct (0x3) StateToTheBlockProof {
+    // TODO: handle all this proof mess later
+    stateProof: cell
+}
+
+type JettonVaultProof = NoProof | MinterDiscoveryProof | OnchainGetterProof | StateToTheBlockProof
+
+struct (0b0) JettonVaultNotificationPaylaod {
+    action: Cell<JettonVaultAction>
+    proof: JettonVaultProof
+}
+
+// struct (0b0) JettonVaultPayloadInline {
+//     data: JettonVaultNotificationPaylaod
+// }
+// struct (0b1) JettonVaultPayloadRef {
+//     ref: cell
+//     rest: RemainingBitsAndRefs // should be empty
+// }
+// type ForwardPayloadValidation = ForwardPayloadInline | ForwardPayloadRef
+// 
+// TEP-74 JettonNotify, but with forwardPayload serialized as expected fields
+struct (0x7362d09c) JettonTransferNotificationWithVaultAction {
+    queryId: uint64
+    jettonAmount: coins
+    transferInitiator: address
+    // we want payload to be stored inline
+    jettonVaultPayload: JettonVaultNotificationPaylaod
 }
