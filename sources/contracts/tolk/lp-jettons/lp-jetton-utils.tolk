@@ -6,7 +6,7 @@ fun calcLpJettonWalletStateInit(
     minterAddress: address,
     jettonWalletCode: cell,
 ): AutoDeployAddress {
-    val emptyWalletStorage: WalletStorage = {
+    val emptyWalletStorage: LpWalletStorage = {
         jettonBalance: 0,
         ownerAddress,
         minterAddress,

@@ -1,13 +1,13 @@
-struct WalletStorage {
+struct LpWalletStorage {
     jettonBalance: coins
     ownerAddress: address
     minterAddress: address
 }
 
-fun WalletStorage.load() {
-    return WalletStorage.fromCell(contract.getData());
+fun LpWalletStorage.load() {
+    return LpWalletStorage.fromCell(contract.getData());
 }
 
-fun WalletStorage.save(self) {
+fun LpWalletStorage.save(self) {
     contract.setData(self.toCell());
 }

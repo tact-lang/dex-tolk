@@ -19,7 +19,7 @@ fun onBouncedMessage(in: InMessageBounced) {
         LiquidityWithdrawViaBurnNotification => msg.jettonAmount, // it's in the beginning of a message
     };
 
-    var storage = lazy WalletStorage.load();
+    var storage = lazy LpWalletStorage.load();
     storage.jettonBalance += restoreAmount;
     storage.save();
 }
@@ -29,7 +29,7 @@ fun onInternalMessage(in: InMessage) {
 
     match (msg) {
         LpJettonTransferInternal => {
-            var storage = lazy WalletStorage.load();
+            var storage = lazy LpWalletStorage.load();
             if (in.senderAddress != storage.minterAddress) {
                 assert (
                     in.senderAddress.isAddressOfLpJettonWallet(
@@ -86,7 +86,7 @@ fun onInternalMessage(in: InMessage) {
                 in.originalForwardFee
             );
 
-            var storage = lazy WalletStorage.load();
+            var storage = lazy LpWalletStorage.load();
             assert (in.senderAddress == storage.ownerAddress) throw ERROR_NOT_OWNER;
             assert (storage.jettonBalance >= msg.jettonAmount) throw ERROR_BALANCE_ERROR;
             storage.jettonBalance -= msg.jettonAmount;
@@ -117,7 +117,7 @@ fun onInternalMessage(in: InMessage) {
         LPWithdrawViaJettonBurn => {
             checkAmountIsEnoughToBurn(in.valueCoins);
 
-            var storage = lazy WalletStorage.load();
+            var storage = lazy LpWalletStorage.load();
             assert (in.senderAddress == storage.ownerAddress) throw ERROR_NOT_OWNER;
             assert (storage.jettonBalance >= msg.jettonAmount) throw ERROR_BALANCE_ERROR;
             storage.jettonBalance -= msg.jettonAmount;
@@ -151,7 +151,7 @@ struct JettonWalletDataReply {
 }
 
 get fun get_wallet_data(): JettonWalletDataReply {
-    val storage = lazy WalletStorage.load();
+    val storage = lazy LpWalletStorage.load();
 
     return {
         jettonBalance: storage.jettonBalance,
