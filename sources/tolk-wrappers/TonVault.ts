@@ -81,7 +81,7 @@ export class TonVault implements Contract {
                     lpTimeout,
                 ),
             )
-            .storeAddress(lpTokensReceiver)
+            .storeMaybeInternalAddress(lpTokensReceiver)
             .endCell()
     }
 }

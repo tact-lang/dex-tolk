@@ -10,6 +10,7 @@ import {
 } from "@ton/core"
 import {Op} from "./DexConstants"
 import {storeLiquidityDepositDestination, storeLpAdditionalParams} from "./common"
+import "./ExtendedBuilder" // Import the extensions
 
 export type JettonVaultConfig = {
     jettonMaster: Address
@@ -19,16 +20,13 @@ export type JettonVaultConfig = {
 }
 
 export function jettonVaultConfigToCell(config: JettonVaultConfig): Cell {
-    return (
-        beginCell()
-            .storeAddress(config.jettonMaster)
-            // TODO: handle null address correctly with wrapper
-            .storeAddress(null)
-            .storeRef(config.ammPoolCode)
-            .storeRef(config.liquidityDepositContractCode)
-            .storeRef(config.jettonWalletCode)
-            .endCell()
-    )
+    return beginCell()
+        .storeAddress(config.jettonMaster)
+        .storeMaybeInternalAddress(null)
+        .storeRef(config.ammPoolCode)
+        .storeRef(config.liquidityDepositContractCode)
+        .storeRef(config.jettonWalletCode)
+        .endCell()
 }
 
 export class JettonVault implements Contract {

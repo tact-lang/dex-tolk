@@ -37,3 +37,17 @@ export const storeLpAdditionalParams = (
         builder.storeRef(additionalParamsCell)
     }
 }
+
+declare module "@ton/core" {
+    interface Builder {
+        storeMaybeInternalAddress(address: Address | null): Builder
+    }
+}
+
+Builder.prototype.storeMaybeInternalAddress = function (address: Address | null): Builder {
+    if (address === null) {
+        return this.storeBit(0)
+    }
+
+    return this.storeBit(1).storeAddress(address)
+}
