@@ -47,6 +47,7 @@ fun onInternalMessage(in: InMessage) {
         SwapRequestTon => {
             val amountForFees = in.valueCoins - msg.amount;
             val action = msg.action.load();
+            // TODO: think of extension function
             val receiver = action.receiver != null ? action.receiver : in.senderAddress;
 
             val hops = action.swap.getNumberOfHops();
@@ -121,6 +122,7 @@ fun onInternalMessage(in: InMessage) {
 
             val storage = lazy TonVaultStorage.load();
 
+            // TODO: inline func with destination as parameter
             val liquidityDepositNotifyMsg = createMessage({
                 body: PartHasBeenDeposited {
                     amount: msg.amountIn,

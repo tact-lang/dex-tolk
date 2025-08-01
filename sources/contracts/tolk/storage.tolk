@@ -117,7 +117,7 @@ fun calcLiquidityDepositStateInit(
                 higherVault,
                 lowerAmount,
                 higherAmount,
-                extra: extra,
+                extra,
                 isHigherSideFilled: false,
                 isLowerSideFilled: false,
                 higherAdditionalParams: null,

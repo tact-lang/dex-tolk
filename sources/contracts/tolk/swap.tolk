@@ -41,6 +41,7 @@ struct SwapContext {
 @inline
 @pure
 fun AmmPoolStorage.getSwapContext(self, incomingVault: address): SwapContext {
+    // TODO: remove return
     if (incomingVault == self.lowerVault) {
         return {
             inVault: self.lowerVault,
@@ -245,7 +246,7 @@ fun getIncomingVault(multihopInfo: Cell<MultihopInfo>?, sender: address) {
 
     match (multihopInfo) {
         Cell<MultihopInfo> => {
-            val multihopInfo = multihopInfo.load();
+            val multihopInfo = lazy multihopInfo.load();
 
             // verify if sender is another pool
             assert (

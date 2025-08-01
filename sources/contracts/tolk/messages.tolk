@@ -139,6 +139,7 @@ struct (0x64c08bfc) LpDepositPartAction {
 
 type JettonVaultAction = SwapRequestAction | LpDepositPartAction
 
+// TODO: struct (0x0) NoProof
 struct (0x0) NoProof {}
 
 struct (0x1) MinterDiscoveryProof {}
