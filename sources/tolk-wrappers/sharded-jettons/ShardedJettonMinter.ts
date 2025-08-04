@@ -86,20 +86,20 @@ export function jettonContentToCell(content: JettonMinterContent) {
         .endCell()
 }
 
-export class JettonMinter implements Contract {
+export class ShardedJettonMinter implements Contract {
     constructor(
         readonly address: Address,
         readonly init?: {code: Cell; data: Cell},
     ) {}
 
     static createFromAddress(address: Address) {
-        return new JettonMinter(address)
+        return new ShardedJettonMinter(address)
     }
 
     static createFromConfig(config: JettonMinterConfig, code: Cell, workchain = 0) {
         const data = jettonMinterConfigToCell(config)
         const init = {code, data}
-        return new JettonMinter(contractAddress(workchain, init), init)
+        return new ShardedJettonMinter(contractAddress(workchain, init), init)
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {
@@ -186,7 +186,7 @@ export class JettonMinter implements Contract {
     ) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonMinter.mintMessage(
+            body: ShardedJettonMinter.mintMessage(
                 to,
                 jetton_amount,
                 from,
@@ -219,7 +219,7 @@ export class JettonMinter implements Contract {
     ) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonMinter.discoveryMessage(owner, include_address),
+            body: ShardedJettonMinter.discoveryMessage(owner, include_address),
             value: value,
         })
     }
@@ -244,7 +244,7 @@ export class JettonMinter implements Contract {
     async sendTopUp(provider: ContractProvider, via: Sender, value: bigint = toNano("0.1")) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonMinter.topUpMessage(),
+            body: ShardedJettonMinter.topUpMessage(),
             value: value,
         })
     }
@@ -272,7 +272,7 @@ export class JettonMinter implements Contract {
     async sendChangeAdmin(provider: ContractProvider, via: Sender, newOwner: Address) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonMinter.changeAdminMessage(newOwner),
+            body: ShardedJettonMinter.changeAdminMessage(newOwner),
             value: toNano("0.1"),
         })
     }
@@ -294,7 +294,7 @@ export class JettonMinter implements Contract {
     async sendClaimAdmin(provider: ContractProvider, via: Sender, query_id: bigint = 0n) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonMinter.claimAdminMessage(query_id),
+            body: ShardedJettonMinter.claimAdminMessage(query_id),
             value: toNano("0.1"),
         })
     }
@@ -321,7 +321,7 @@ export class JettonMinter implements Contract {
     ) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonMinter.dropAdminMessage(query_id),
+            body: ShardedJettonMinter.dropAdminMessage(query_id),
             value,
         })
     }
@@ -355,7 +355,7 @@ export class JettonMinter implements Contract {
     ) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonMinter.changeContentMessage(content),
+            body: ShardedJettonMinter.changeContentMessage(content),
             value: toNano("0.1"),
         })
     }
@@ -431,7 +431,7 @@ export class JettonMinter implements Contract {
     ) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonMinter.upgradeMessage(new_code, new_data, query_id),
+            body: ShardedJettonMinter.upgradeMessage(new_code, new_data, query_id),
             value,
         })
     }

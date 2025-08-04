@@ -1,4 +1,4 @@
-import "sharding"
+import "lp-sharding"
 import "lp-storage"
 
 fun calcLpJettonWalletStateInit(

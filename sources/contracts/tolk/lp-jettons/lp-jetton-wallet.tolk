@@ -3,7 +3,7 @@ import "lp-errors"
 import "lp-fees-management"
 import "lp-jetton-utils"
 import "lp-jettons-messages"
-import "sharding"
+import "lp-sharding"
 import "lp-storage"
 
 type AllowedMessageToWallet = AskToTransfer | LPWithdrawViaJettonBurn | LpJettonTransferInternal

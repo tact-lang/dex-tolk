@@ -11,7 +11,12 @@ import {
     toNano,
 } from "@ton/core"
 import {Op} from "./JettonConstants"
-import {endParse} from "./JettonMinter"
+
+function endParse(slice: Slice) {
+    if (slice.remainingBits > 0 || slice.remainingRefs > 0) {
+        throw new Error("remaining bits in data")
+    }
+}
 
 export type JettonWalletConfig = {
     ownerAddress: Address
@@ -39,20 +44,20 @@ export function parseJettonWalletData(data: Cell) {
     return parsed
 }
 
-export class JettonWallet implements Contract {
+export class LpJettonWallet implements Contract {
     constructor(
         readonly address: Address,
         readonly init?: {code: Cell; data: Cell},
     ) {}
 
     static createFromAddress(address: Address) {
-        return new JettonWallet(address)
+        return new LpJettonWallet(address)
     }
 
     static createFromConfig(config: JettonWalletConfig, code: Cell, workchain = 0) {
         const data = jettonWalletConfigToCell(config)
         const init = {code, data}
-        return new JettonWallet(contractAddress(workchain, init), init)
+        return new LpJettonWallet(contractAddress(workchain, init), init)
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {
@@ -128,7 +133,7 @@ export class JettonWallet implements Contract {
     ) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonWallet.transferMessage(
+            body: LpJettonWallet.transferMessage(
                 jetton_amount,
                 to,
                 responseAddress,
@@ -139,6 +144,23 @@ export class JettonWallet implements Contract {
             value: value,
         })
     }
+
+    static createLiquidityWithdrawParametersCell(
+        minAmountLeft: bigint,
+        minAmountRight: bigint,
+        timeout: bigint,
+        receiver: Address,
+        successfulPayload: Cell | null,
+    ) {
+        return beginCell()
+            .storeCoins(minAmountLeft)
+            .storeCoins(minAmountRight)
+            .storeUint(timeout, 32)
+            .storeAddress(receiver)
+            .storeMaybeRef(successfulPayload)
+            .endCell()
+    }
+
     /*
       burn#595f07bc query_id:uint64 amount:(VarUInteger 16)
                     response_destination:MsgAddress custom_payload:(Maybe ^Cell)
@@ -147,15 +169,19 @@ export class JettonWallet implements Contract {
     static burnMessage(
         jetton_amount: bigint,
         responseAddress: Address | null,
-        customPayload: Cell | null,
+        liqWithdrawalParamsCell: Cell,
     ) {
-        return beginCell()
-            .storeUint(Op.burn, 32)
-            .storeUint(0, 64) // op, queryId
-            .storeCoins(jetton_amount)
-            .storeAddress(responseAddress)
-            .storeMaybeRef(customPayload)
-            .endCell()
+        return (
+            beginCell()
+                .storeUint(Op.burn, 32)
+                .storeUint(0, 64) // op, queryId
+                .storeCoins(jetton_amount)
+                // it's AddressNone again, but we actually don't care this time
+                // so leave it be
+                .storeAddress(responseAddress)
+                .storeRef(liqWithdrawalParamsCell)
+                .endCell()
+        )
     }
 
     async sendBurn(
@@ -164,11 +190,15 @@ export class JettonWallet implements Contract {
         value: bigint,
         jetton_amount: bigint,
         responseAddress: Address | null,
-        customPayload: Cell | null,
+        liqWithdrawalParamsCell: Cell,
     ) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonWallet.burnMessage(jetton_amount, responseAddress, customPayload),
+            body: LpJettonWallet.burnMessage(
+                jetton_amount,
+                responseAddress,
+                liqWithdrawalParamsCell,
+            ),
             value: value,
         })
     }
@@ -185,7 +215,7 @@ export class JettonWallet implements Contract {
     async sendWithdrawTons(provider: ContractProvider, via: Sender) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonWallet.withdrawTonsMessage(),
+            body: LpJettonWallet.withdrawTonsMessage(),
             value: toNano("0.1"),
         })
     }
@@ -210,7 +240,7 @@ export class JettonWallet implements Contract {
     ) {
         await provider.internal(via, {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: JettonWallet.withdrawJettonsMessage(from, amount),
+            body: LpJettonWallet.withdrawJettonsMessage(from, amount),
             value: toNano("0.1"),
         })
     }

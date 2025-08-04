@@ -1,6 +1,6 @@
 import "@stdlib/gas-payments"
 import "lp-errors"
-import "sharding"
+import "lp-sharding"
 
 // Storage costs
 // these constants are used to estimate storage fee (how much we should pay for storing a wallet contract);

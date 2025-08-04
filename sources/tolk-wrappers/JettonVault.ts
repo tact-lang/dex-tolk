@@ -85,6 +85,17 @@ export class JettonVault implements Contract {
         })
     }
 
+    async getJettonVaultInfo(provider: ContractProvider) {
+        let res = await provider.get("storage", [])
+
+        return {
+            jettonMaster: res.stack.readAddress(),
+            // TODO: check if this reads Maybe<InternalAddress> as null | address,
+            // not Address | AddressNone
+            jettonWallet: res.stack.readAddressOpt(),
+        }
+    }
+
     private static storeProof(proof: Proof) {
         return (b: Builder) => {
             b.storeUint(proof.proofType, 4)
@@ -145,11 +156,14 @@ export class JettonVault implements Contract {
     }
 
     static createJettonVaultNotificationPayload(action: Cell, proof: Proof): Slice {
-        return beginCell()
-            .storeBit(0)
-            .storeRef(action)
-            .store(JettonVault.storeProof(proof))
-            .endCell()
-            .asSlice()
+        return (
+            beginCell()
+                // actually ShardedJetton wrappers handle either bit themselves
+                // .storeBit(0)
+                .storeRef(action)
+                .store(JettonVault.storeProof(proof))
+                .endCell()
+                .asSlice()
+        )
     }
 }

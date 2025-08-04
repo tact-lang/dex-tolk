@@ -139,5 +139,14 @@ fun onInternalMessage(in: InMessage) {
             liquidityDepositNotifyMsg.send(SEND_MODE_CARRY_ALL_BALANCE |
             SEND_MODE_BOUNCE_ON_ACTION_FAIL);
         }
+        else => {
+            val refundMsg = createMessage({
+                bounce: false,
+                dest: in.senderAddress,
+                value: 0,
+            });
+
+            refundMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+        }
     }
 }

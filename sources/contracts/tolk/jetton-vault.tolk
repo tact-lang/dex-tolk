@@ -133,7 +133,28 @@ fun onInternalMessage(in: InMessage) {
 
             payoutFromPoolMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
         }
+        else => {
+            val refundMsg = createMessage({
+                bounce: false,
+                dest: in.senderAddress,
+                value: 0,
+            });
+
+            refundMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+        }
     }
+}
+
+struct JettonVaultInfo {
+    jettonMaster: address
+    jettonWallet: address?
+}
+
+// get methods
+get fun storage(): JettonVaultInfo {
+    val storage = lazy JettonVaultStorage.load();
+
+    return { jettonMaster: storage.jettonMaster, jettonWallet: storage.jettonWallet };
 }
 
 // TODO: inline_ref?

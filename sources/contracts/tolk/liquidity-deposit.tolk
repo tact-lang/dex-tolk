@@ -66,6 +66,15 @@ fun onInternalMessage(in: InMessage) {
 
             storage.save();
         }
+        else => {
+            val refundMsg = createMessage({
+                bounce: false,
+                dest: in.senderAddress,
+                value: 0,
+            });
+
+            refundMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+        }
     }
 }
 
