@@ -38,12 +38,14 @@ export const storeLpAdditionalParams = (
     }
 }
 
+// extending core Builder to correctly store optional addresses
 declare module "@ton/core" {
     interface Builder {
         storeMaybeInternalAddress(address: Address | null): Builder
     }
 }
 
+// we want to store Maybe<InternalAddress> as maybe zero, not as AddressNone
 Builder.prototype.storeMaybeInternalAddress = function (address: Address | null): Builder {
     if (address === null) {
         return this.storeBit(0)

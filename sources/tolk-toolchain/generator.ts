@@ -3,6 +3,7 @@ import {LiquidityDeposit} from "../tolk-wrappers/LiquidityDeposit"
 import {TonVault} from "../tolk-wrappers/TonVault"
 import {compileAll} from "./compile"
 import {AmmPool} from "../tolk-wrappers/AmmPool"
+import {JettonVault} from "../tolk-wrappers/JettonVault"
 
 const compiledDex = compileAll()
 
@@ -54,5 +55,19 @@ export const createAmmPoolContract = async (lowerVault: Address, higherVault: Ad
             jettonWalletCode: dex["lp-jetton-wallet"],
         },
         dex["amm-pool"],
+    )
+}
+
+export const createJettonVaultContract = async (jettonMaster: Address) => {
+    const dex = await compiledDex
+
+    return JettonVault.createFromConfig(
+        {
+            jettonMaster,
+            ammPoolCode: dex["amm-pool"],
+            liquidityDepositContractCode: dex["liquidity-deposit"],
+            jettonWalletCode: dex["lp-jetton-wallet"],
+        },
+        dex["jetton-vault"],
     )
 }

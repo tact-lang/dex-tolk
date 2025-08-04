@@ -1,16 +1,18 @@
 import {
     Address,
     beginCell,
+    Builder,
     Cell,
     Contract,
     contractAddress,
     ContractProvider,
     Sender,
     SendMode,
+    Slice,
 } from "@ton/core"
 import {Op} from "./DexConstants"
 import {storeLiquidityDepositDestination, storeLpAdditionalParams} from "./common"
-import "./ExtendedBuilder" // Import the extensions
+import "./ExtendedBuilder"
 
 export type JettonVaultConfig = {
     jettonMaster: Address
@@ -18,6 +20,31 @@ export type JettonVaultConfig = {
     liquidityDepositContractCode: Cell
     jettonWalletCode: Cell
 }
+
+export type NoProof = {
+    proofType: typeof JettonVault.PROOF_NO_PROOF_ATTACHED
+}
+
+export type MinterDiscoveryProof = {
+    proofType: typeof JettonVault.MINTER_DISCOVERY_PROOF
+}
+
+export type OnchainGetterProof = {
+    proofType: typeof JettonVault.ONCHAIN_GETTER_PROOF
+    code: Cell
+    data: Cell
+}
+
+export type StateProof = {
+    proofType: typeof JettonVault.PROOF_STATE_TO_THE_BLOCK
+    mcBlockSeqno: bigint
+    shardBitLen: bigint
+    mcBlockHeaderProof: Cell
+    shardBlockHeaderProof: Cell
+    shardChainStateProof: Cell
+}
+
+export type Proof = NoProof | MinterDiscoveryProof | OnchainGetterProof | StateProof
 
 export function jettonVaultConfigToCell(config: JettonVaultConfig): Cell {
     return beginCell()
@@ -34,6 +61,11 @@ export class JettonVault implements Contract {
         readonly address: Address,
         readonly init?: {code: Cell; data: Cell},
     ) {}
+
+    static readonly PROOF_NO_PROOF_ATTACHED = 0n
+    static readonly MINTER_DISCOVERY_PROOF = 1n
+    static readonly ONCHAIN_GETTER_PROOF = 2n
+    static readonly PROOF_STATE_TO_THE_BLOCK = 3n
 
     static createFromAddress(address: Address) {
         return new JettonVault(address)
@@ -53,10 +85,34 @@ export class JettonVault implements Contract {
         })
     }
 
+    private static storeProof(proof: Proof) {
+        return (b: Builder) => {
+            b.storeUint(proof.proofType, 4)
+
+            switch (proof.proofType) {
+                case JettonVault.PROOF_NO_PROOF_ATTACHED:
+                    break
+                case JettonVault.MINTER_DISCOVERY_PROOF:
+                    break
+                case JettonVault.ONCHAIN_GETTER_PROOF:
+                    b.storeMaybeUint(null, 5)
+                        .storeMaybeUint(null, 2)
+                        .storeMaybeRef(proof.code)
+                        .storeMaybeRef(proof.data)
+                        .storeMaybeRef(null)
+                    break
+                case JettonVault.PROOF_STATE_TO_THE_BLOCK:
+                    // TODO: do
+                    break
+                default:
+                    throw new Error("Unknown proof type")
+            }
+        }
+    }
+
     static createJettonVaultLiquidityDepositBody(
         // TODO: either structs for typescript
         liquidityDepositContractAddress: Address,
-        amount: bigint,
         payloadOnSuccess: Cell | null,
         payloadOnFailure: Cell | null,
         minAmountToDeposit: bigint,
@@ -69,8 +125,7 @@ export class JettonVault implements Contract {
         } | null,
     ): Cell {
         return beginCell()
-            .storeUint(Op.AddLiquidityPartTon, 32)
-            .storeCoins(amount)
+            .storeUint(Op.AddLiquidityPartJetton, 32)
             .store(
                 storeLiquidityDepositDestination(
                     liquidityDepositContractAddress,
@@ -85,7 +140,16 @@ export class JettonVault implements Contract {
                     lpTimeout,
                 ),
             )
-            .storeAddress(lpTokensReceiver)
+            .storeMaybeInternalAddress(lpTokensReceiver)
             .endCell()
+    }
+
+    static createJettonVaultNotificationPayload(action: Cell, proof: Proof): Slice {
+        return beginCell()
+            .storeBit(0)
+            .storeRef(action)
+            .store(JettonVault.storeProof(proof))
+            .endCell()
+            .asSlice()
     }
 }
