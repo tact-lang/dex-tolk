@@ -9,7 +9,6 @@ import {
     createAmmPoolContract,
     createJettonVaultContract,
     createLiquidityDepositContract,
-    createLpJettonWalletContract,
     createShardedJettonMinterContract,
     createTonVaultContract,
 } from "../tolk-toolchain/generator"
@@ -17,6 +16,7 @@ import {TonVault} from "../tolk-wrappers/TonVault"
 import {ShardedJettonWallet} from "../tolk-wrappers/sharded-jettons/ShardedJettonWallet"
 import {JettonVault} from "../tolk-wrappers/JettonVault"
 import {LpJettonWallet} from "../tolk-wrappers/lp-jettons/LpJettonWallet"
+import {randomBytes} from "crypto"
 
 export type Create<T> = (blockchain: Blockchain) => Promise<T>
 type SandboxSendResult = SendMessageResult & {
@@ -69,7 +69,7 @@ export const createJetton = async (blockchain: Blockchain) => {
 
     const minter = blockchain.openContract(
         await createShardedJettonMinterContract(minterOwner.address, {
-            uri: "meta.json",
+            uri: randomBytes(16).toString(),
         }),
     )
 
@@ -429,15 +429,16 @@ export const createTonVault: Create<VaultInterface<TonTreasury>> = async (
 
 const createLiquidityDepositSetup = (
     blockchain: Blockchain,
-    vaultLeft: Address,
-    vaultRight: Address,
+    lowerVault: Address,
+    higherVault: Address,
+    isSwapped: boolean,
 ) => {
     const depositorIds: Map<string, bigint> = new Map()
 
     return async (
         depositorContract: SandboxContract<TreasuryContract>,
-        amountLeft: bigint,
-        amountRight: bigint,
+        amountA: bigint,
+        amountB: bigint,
     ) => {
         const depositor = depositorContract.address
 
@@ -445,14 +446,12 @@ const createLiquidityDepositSetup = (
         const contractId = depositorIds.get(depositorKey) || 0n
         depositorIds.set(depositorKey, contractId + 1n)
 
-        const sortedAddresses = sortAddresses(vaultLeft, vaultRight, amountLeft, amountRight)
-
         const liquidityDeposit = blockchain.openContract(
             await createLiquidityDepositContract(
-                sortedAddresses.lower,
-                sortedAddresses.higher,
-                sortedAddresses.leftAmount,
-                sortedAddresses.rightAmount,
+                lowerVault,
+                higherVault,
+                isSwapped ? amountB : amountA,
+                isSwapped ? amountA : amountB,
                 depositor,
                 contractId,
             ),
@@ -472,12 +471,16 @@ const createLiquidityDepositSetup = (
         }
 
         const ammPool = blockchain.openContract(
-            await createAmmPoolContract(sortedAddresses.lower, sortedAddresses.higher),
+            await createAmmPoolContract(lowerVault, higherVault),
         )
 
-        const depositorLpWallet = blockchain.openContract(
-            await createLpJettonWalletContract(ammPool.address, depositor),
-        )
+        const getLpWallet = async () => {
+            // toncore doesn't support sharding so we just call
+            // get method; function instead of const because before pool deploy its not inited
+            return blockchain.openContract(
+                LpJettonWallet.createFromAddress(await ammPool.getWalletAddress(depositor)),
+            )
+        }
 
         const withdrawLiquidity = async (
             amount: bigint,
@@ -486,6 +489,8 @@ const createLiquidityDepositSetup = (
             timeout: bigint,
             successfulPayload: Cell | null,
         ) => {
+            const depositorLpWallet = await getLpWallet()
+
             const paramsCell = LpJettonWallet.createLiquidityWithdrawParametersCell(
                 minAmountLeft,
                 minAmountRight,
@@ -518,7 +523,7 @@ const createLiquidityDepositSetup = (
         return {
             deploy,
             liquidityDeposit,
-            depositorLpWallet,
+            getLpWallet,
             withdrawLiquidity,
         }
     }
@@ -539,19 +544,20 @@ export const createAmmPool = async <T, U>(
 ) => {
     const sortedVaults = sortAddresses(firstVault.vault.address, secondVault.vault.address, 0n, 0n)
 
-    const vaultA = sortedVaults.lower === firstVault.vault.address ? firstVault : secondVault
-    const vaultB = sortedVaults.lower === firstVault.vault.address ? secondVault : firstVault
+    const lowerVault = sortedVaults.lower === firstVault.vault.address ? firstVault : secondVault
+    const higherVault = sortedVaults.lower === firstVault.vault.address ? secondVault : firstVault
 
-    const sortedAddresses = sortAddresses(vaultA.vault.address, vaultB.vault.address, 0n, 0n)
+    const isSwapped = sortedVaults.lower !== firstVault.vault.address
 
     const ammPool = blockchain.openContract(
-        await createAmmPoolContract(vaultA.vault.address, vaultB.vault.address),
+        await createAmmPoolContract(lowerVault.vault.address, higherVault.vault.address),
     )
 
     const liquidityDepositSetup = createLiquidityDepositSetup(
         blockchain,
-        sortedAddresses.lower,
-        sortedAddresses.higher,
+        lowerVault.vault.address,
+        higherVault.vault.address,
+        isSwapped,
     )
 
     // for later stage setup do everything by obtaining the address of the liq deposit here
@@ -561,23 +567,23 @@ export const createAmmPool = async <T, U>(
     // - add liq to vaults
     const initWithLiquidity = async (
         depositor: SandboxContract<TreasuryContract>,
-        amountLeft: bigint,
-        amountRight: bigint,
+        amountA: bigint,
+        amountB: bigint,
     ) => {
-        await vaultA.deploy()
-        await vaultB.deploy()
-        const liqSetup = await liquidityDepositSetup(depositor, amountLeft, amountRight)
+        await firstVault.deploy()
+        await secondVault.deploy()
+        const liqSetup = await liquidityDepositSetup(depositor, amountA, amountB)
 
         await liqSetup.deploy()
-        await vaultA.addLiquidity(liqSetup.liquidityDeposit.address, amountLeft)
-        await vaultB.addLiquidity(liqSetup.liquidityDeposit.address, amountRight)
+        await firstVault.addLiquidity(liqSetup.liquidityDeposit.address, amountA)
+        await secondVault.addLiquidity(liqSetup.liquidityDeposit.address, amountB)
 
         if ((await blockchain.getContract(ammPool.address)).balance > 0n) {
             throw new Error("Vault balance should be 0 after deploy")
         }
 
         return {
-            depositorLpWallet: liqSetup.depositorLpWallet,
+            getLpWallet: liqSetup.getLpWallet,
             withdrawLiquidity: liqSetup.withdrawLiquidity,
         }
     }
@@ -636,7 +642,7 @@ export const createAmmPool = async <T, U>(
         vaultA: firstVault,
         vaultB: secondVault,
         sorted: sortedVaults,
-        isSwapped: sortedVaults.lower !== firstVault.vault.address,
+        isSwapped,
         liquidityDepositSetup,
         swap,
         initWithLiquidity,

@@ -176,11 +176,10 @@ fun handleAction(
                 return false;
             }
 
-            var destination: address | AutoDeployAddress;
+            val storage = lazy JettonVaultStorage.load();
 
             match (action.destination) {
                 LiquidityDepositWithInitData => {
-                    val storage = lazy JettonVaultStorage.load();
                     val sortedAddressesAndAmounts = sortAddressesAndAmounts(
                         contract.getAddress(),
                         action.destination.otherVault,
@@ -192,7 +191,7 @@ fun handleAction(
                          ? action.lpTokensReceiver
                          : transferInitiator;
 
-                    destination = calcLiquidityDepositStateInit(
+                    val destinationNotify = calcLiquidityDepositStateInit(
                         sortedAddressesAndAmounts.lower,
                         sortedAddressesAndAmounts.higher,
                         sortedAddressesAndAmounts.lowerAmount,
@@ -200,27 +199,38 @@ fun handleAction(
                         (lpTokensReceiver, action.destination.contractId),
                         storage.liquidityDepositContractCode
                     );
+
+                    val liquidityDepositNotifyMsg = createMessage({
+                        body: PartHasBeenDeposited {
+                            amount: jettonAmount,
+                            additionalParams: action.additionalParams,
+                            ammPoolCode: storage.ammPoolCode,
+                            liquidityDepositCode: storage.liquidityDepositContractCode,
+                            jettonWalletCode: storage.jettonWalletCode,
+                        },
+                        bounce: false,
+                        dest: destinationNotify,
+                        value: 0,
+                    });
+                    liquidityDepositNotifyMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
                 }
                 LiquidityDepositAddress => {
-                    destination = action.destination;
+                    // TODO: func with dest as param
+                    val liquidityDepositNotifyMsg = createMessage({
+                        body: PartHasBeenDeposited {
+                            amount: jettonAmount,
+                            additionalParams: action.additionalParams,
+                            ammPoolCode: storage.ammPoolCode,
+                            liquidityDepositCode: storage.liquidityDepositContractCode,
+                            jettonWalletCode: storage.jettonWalletCode,
+                        },
+                        bounce: false,
+                        dest: action.destination,
+                        value: 0,
+                    });
+                    liquidityDepositNotifyMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
                 }
             }
-
-            val storage = lazy JettonVaultStorage.load();
-            // TODO: fix error
-            val liquidityDepositNotifyMsg = createMessage({
-                body: PartHasBeenDeposited {
-                    amount: jettonAmount,
-                    additionalParams: action.additionalParams,
-                    ammPoolCode: storage.ammPoolCode,
-                    liquidityDepositCode: storage.liquidityDepositContractCode,
-                    jettonWalletCode: storage.jettonWalletCode,
-                },
-                bounce: false,
-                dest: destination,
-                value: 0,
-            });
-            liquidityDepositNotifyMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
 
             return true;
         }

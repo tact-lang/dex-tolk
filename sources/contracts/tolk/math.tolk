@@ -6,8 +6,8 @@ struct SortedAddresses {
 struct SortedAddressesAndAmounts {
     lower: address
     higher: address
-    higherAmount: coins
     lowerAmount: coins
+    higherAmount: coins
 }
 
 @inline

@@ -59,7 +59,9 @@ fun onInternalMessage(in: InMessage) {
                 lowerAdditionalParams.lpTimeout,
                 higherAdditionalParams.lpTimeout
             );
-            assert (maxLpTimeout.isTimeoutExceeded()) throw LIQUIDITY_PROVISIONING_TIMEOUT_EXCEEDED;
+            assert (
+                !maxLpTimeout.isTimeoutExceeded()
+            ) throw LIQUIDITY_PROVISIONING_TIMEOUT_EXCEEDED;
 
             val reserveUpdates = handleReservesUpdate(
                 msg.lowerAmount,
@@ -167,7 +169,7 @@ fun onInternalMessage(in: InMessage) {
 
             val withdrawalParameters = msg.parameters.load();
             assert (
-                withdrawalParameters.timeout.isTimeoutExceeded()
+                !withdrawalParameters.timeout.isTimeoutExceeded()
             ) throw LIQUIDITY_WITHDRAWAL_TIMEOUT_EXCEEDED;
 
             val (lowerAmountOut, higherAmountOut) = calcWithdrawalAmounts(

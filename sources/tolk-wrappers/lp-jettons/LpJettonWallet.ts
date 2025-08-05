@@ -25,7 +25,6 @@ export type JettonWalletConfig = {
 
 export function jettonWalletConfigToCell(config: JettonWalletConfig): Cell {
     return beginCell()
-        .storeUint(0, 4) // status
         .storeCoins(0) // jetton balance
         .storeAddress(config.ownerAddress)
         .storeAddress(config.jettonMasterAddress)
@@ -35,7 +34,6 @@ export function jettonWalletConfigToCell(config: JettonWalletConfig): Cell {
 export function parseJettonWalletData(data: Cell) {
     const sc = data.beginParse()
     const parsed = {
-        status: sc.loadUint(4),
         balance: sc.loadCoins(),
         ownerAddress: sc.loadAddress(),
         jettonMasterAddress: sc.loadAddress(),
@@ -85,14 +83,7 @@ export class LpJettonWallet implements Contract {
         let res = await provider.get("get_wallet_data", [])
         return res.stack.readBigNumber()
     }
-    async getWalletStatus(provider: ContractProvider) {
-        let state = await provider.getState()
-        if (state.state.type !== "active") {
-            return 0
-        }
-        let res = await provider.get("get_status", [])
-        return res.stack.readNumber()
-    }
+
     static transferMessage(
         jetton_amount: bigint,
         to: Address,
