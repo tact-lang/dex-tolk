@@ -122,7 +122,7 @@ fun handleSwap(
 
             if (amountOut < swap.swapInfo.minAmountOut) {
                 returnFunds(incomingVault, receiver, inAmount, swap.parameters.payloadOnFailure);
-                throw AMOUNT_OUT_IS_LESS_THAN_LIMIT
+                throw AMOUNT_OUT_IS_LESS_THAN_LIMIT;
             }
 
             match (swap.swapInfo.nextStep) {
@@ -137,16 +137,14 @@ fun handleSwap(
                                 outVault: ctx.outVault,
                                 lowerVault: storage.lowerVault,
                                 higherVault: storage.higherVault,
-                            }
-                                .toCell(),
+                            }.toCell(),
                             swap: Swap {
                                 parameters: swap.parameters,
                                 swapInfo: ExactInSwap {
                                     minAmountOut: nextSwapStep.minAmountOut,
                                     nextStep: nextSwapStep.nextStep,
                                 },
-                            }
-                                .toCell(),
+                            }.toCell(),
                         },
                         bounce: false,
                         dest: nextSwapStep.pool,
@@ -178,7 +176,7 @@ fun handleSwap(
 
             if (updatedOutReserve <= 0) {
                 returnFunds(incomingVault, receiver, inAmount, swap.parameters.payloadOnFailure);
-                throw INSUFFICIENT_RESERVES_FOR_EXACT_OUT_VALUE
+                throw INSUFFICIENT_RESERVES_FOR_EXACT_OUT_VALUE;
             }
 
             // 2. calculate requiredAmountInWithPoolFeeApplied so that we
@@ -191,7 +189,7 @@ fun handleSwap(
 
             if (requiredAmountInWithPoolFeeApplied > inAmount) {
                 returnFunds(incomingVault, receiver, inAmount, swap.parameters.payloadOnFailure);
-                throw INSUFFICIENT_IN_AMOUNT_FOR_EXACT_OUT_VALUE
+                throw INSUFFICIENT_IN_AMOUNT_FOR_EXACT_OUT_VALUE;
             }
 
             // 3. if we received more inAmount than we need for swap,

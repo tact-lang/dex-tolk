@@ -148,7 +148,6 @@ fun onInternalMessage(in: InMessage) {
                     SEND_MODE_BOUNCE_ON_ACTION_FAIL);
                 }
             }
-            ;
         }
         else => {
             val refundMsg = createMessage({

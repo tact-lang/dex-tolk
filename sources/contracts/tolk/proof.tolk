@@ -5,8 +5,7 @@ fun address.isFromStateInitInBasechain(self, stateInit: StateInit) {
     return AutoDeployAddress {
         stateInit: { code: stateInit.code!, data: stateInit.data! },
         workchain: BASECHAIN,
-    }
-        .addressMatches(self);
+    }.addressMatches(self);
 }
 
 fun checkProof(proof: JettonVaultProof, minter: address, msgSender: address) {

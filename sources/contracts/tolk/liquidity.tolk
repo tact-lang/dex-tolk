@@ -11,7 +11,7 @@ struct LiquidityProvisioningResult {
     lpTokensToMint: coins
 }
 
-@pure
+// @pure
 @inline
 fun calcLpTokensAmountAfterFirstDeposit(
     lowerAmount: coins,
@@ -20,6 +20,12 @@ fun calcLpTokensAmountAfterFirstDeposit(
     higherSideReserve: coins,
     totalSupply: coins,
 ) {
+    /*
+        lpTokens: min(
+            (amountADesired * mintedLpTokenTotalSupply) / tokenAReserveBefore,
+            (amountB * mintedLpTokenTotalSupply) / tokenBReserveBefore,
+        ),
+    */
     return min(
         mulDivFloor(lowerAmount, totalSupply, lowerSideReserve - lowerAmount),
         mulDivFloor(higherAmount, totalSupply, higherSideReserve - higherAmount)
@@ -62,7 +68,7 @@ fun handleReservesUpdate(
 
         if (balancedHigherAmount < higherAdditionalParams.minAmountToDeposit) {
             // TODO: fail lp
-            throw LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED
+            throw LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED;
         }
 
         // refund higher lp excesses if we received more than we can accept
@@ -87,7 +93,7 @@ fun handleReservesUpdate(
 
         val lpTokensToMint = calcLpTokensAmountAfterFirstDeposit(
             lowerAmount,
-            higherAmount,
+            balancedHigherAmount,
             updatedLowerReserve,
             updatedHigherReserve,
             storage.totalSupply
@@ -109,7 +115,7 @@ fun handleReservesUpdate(
 
     if (balancedLowerAmount < lowerAdditionalParams.minAmountToDeposit) {
         // TODO: fail lp
-        throw LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED
+        throw LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED;
     }
 
     // refund lower lp excesses if we received more than we can accept
@@ -133,7 +139,7 @@ fun handleReservesUpdate(
     val updatedHigherReserve = storage.higherSideReserve + higherAmount;
 
     val lpTokensToMint = calcLpTokensAmountAfterFirstDeposit(
-        lowerAmount,
+        balancedLowerAmount,
         higherAmount,
         updatedLowerReserve,
         updatedHigherReserve,

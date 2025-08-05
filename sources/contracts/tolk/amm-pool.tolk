@@ -125,7 +125,7 @@ fun onInternalMessage(in: InMessage) {
                     msg.amount,
                     swap.parameters.payloadOnFailure
                 );
-                throw NO_LIQUIDITY_IN_POOL
+                throw NO_LIQUIDITY_IN_POOL;
             }
 
             if (swap.parameters.timeout.isTimeoutExceeded()) {
@@ -135,7 +135,7 @@ fun onInternalMessage(in: InMessage) {
                     msg.amount,
                     swap.parameters.payloadOnFailure
                 );
-                throw SWAP_TIMEOUT_EXCEEDED
+                throw SWAP_TIMEOUT_EXCEEDED;
             }
 
             val (updatedInReserve, updatedOutReserve, isSwapFromHigherVault) = handleSwap(

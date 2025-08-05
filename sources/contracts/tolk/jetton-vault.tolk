@@ -66,7 +66,7 @@ fun onInternalMessage(in: InMessage) {
                     SEND_MODE_IGNORE_ERRORS);
 
                     commitContractDataAndActions();
-                    throw error
+                    throw error;
                 }
 
                 // if we passed the proof check, we can save new address
@@ -78,7 +78,7 @@ fun onInternalMessage(in: InMessage) {
             if (in.senderAddress != storage.jettonWallet!) {
                 //  TODO: return funds
                 commitContractDataAndActions();
-                throw 100
+                throw 100;
             }
 
             val result = handleAction(
@@ -92,7 +92,7 @@ fun onInternalMessage(in: InMessage) {
             if (!result) {
                 //  TODO: return funds
                 commitContractDataAndActions();
-                throw 100
+                throw 100;
             }
         }
         PayoutFromPool => {

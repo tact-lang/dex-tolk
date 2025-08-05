@@ -50,8 +50,7 @@ fun calcAmmPoolStateInit(
                 ammPoolCode,
                 liquidityDepositCode,
                 jettonWalletCode,
-            }
-                .toCell(),
+            }.toCell(),
         },
     };
 }
@@ -104,8 +103,7 @@ fun calcLiquidityDepositStateInit(
         (address, uint64) => LiquidityDepositExtraFields {
             lpTokensReceiver: lpExtraFields.0,
             contractId: lpExtraFields.1,
-        }
-            .toCell(),
+        }.toCell(),
     };
 
     return {
@@ -122,8 +120,7 @@ fun calcLiquidityDepositStateInit(
                 isLowerSideFilled: false,
                 higherAdditionalParams: null,
                 lowerAdditionalParams: null,
-            }
-                .toCell(),
+            }.toCell(),
         },
     };
 }

@@ -31,7 +31,7 @@ fun onInternalMessage(in: InMessage) {
                 storage.higherAdditionalParams = msg.additionalParams;
                 storage.isHigherSideFilled = true;
             } else {
-                throw MSG_NOT_FROM_VAULTS
+                throw MSG_NOT_FROM_VAULTS;
             }
 
             assert (storage.lowerVault != storage.higherVault) throw VAULTS_MUST_BE_DIFFFERENT;
