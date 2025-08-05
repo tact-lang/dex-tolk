@@ -10,9 +10,8 @@ import {
     SendMode,
     Slice,
 } from "@ton/core"
-import {Op} from "./DexConstants"
+import {DexOpcodes} from "./DexConstants"
 import {storeLiquidityDepositDestination, storeLpAdditionalParams} from "./common"
-import "./ExtendedBuilder"
 
 export type JettonVaultConfig = {
     jettonMaster: Address
@@ -136,7 +135,7 @@ export class JettonVault implements Contract {
         } | null,
     ): Cell {
         return beginCell()
-            .storeUint(Op.AddLiquidityPartJetton, 32)
+            .storeUint(DexOpcodes.AddLiquidityPartJetton, 32)
             .store(
                 storeLiquidityDepositDestination(
                     liquidityDepositContractAddress,

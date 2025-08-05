@@ -5,17 +5,17 @@ import {toNano} from "@ton/core"
 import {Blockchain} from "@ton/sandbox"
 import {findTransactionRequired, flattenTransaction, randomAddress} from "@ton/test-utils"
 import {AmmPool} from "../output/DEX_AmmPool"
-import {LiquidityDepositContract} from "../output/DEX_LiquidityDepositContract"
 import {
     createJettonAmmPool,
     createJettonVault,
     createTonJettonAmmPool,
     createTonVault,
-} from "../utils/environment"
+} from "../utils/environment-tolk"
 import {sortAddresses} from "../utils/deployUtils"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {ExtendedLPJettonWallet} from "../wrappers/ExtendedLPJettonWallet"
+import {DexOpcodes} from "../tolk-wrappers/DexConstants"
 
 describe("Liquidity deposit", () => {
     test("Jetton vault should deploy correctly", async () => {
@@ -97,11 +97,11 @@ describe("Liquidity deposit", () => {
         expect(vaultALiquidityAddResult.transactions).toHaveTransaction({
             from: vaultA.vault.address,
             to: liqSetup.liquidityDeposit.address,
-            op: LiquidityDepositContract.opcodes.PartHasBeenDeposited,
+            op: DexOpcodes.PartHasBeenDeposited,
             success: true,
         })
         const status = await liqSetup.liquidityDeposit.getStatus()
-        expect(status.leftSideFilled || status.rightSideFilled).toBeTruthy()
+        expect(status.isLowerSideFilled || status.isHigherSideFilled).toBeTruthy()
 
         // deploy vaultB
         const vaultBDeployResult = await vaultB.deploy()
@@ -119,7 +119,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResult.transactions).toHaveTransaction({
             from: vaultB.vault.address,
             to: liqSetup.liquidityDeposit.address,
-            op: LiquidityDepositContract.opcodes.PartHasBeenDeposited,
+            op: DexOpcodes.PartHasBeenDeposited,
             success: true,
         })
 
@@ -137,8 +137,9 @@ describe("Liquidity deposit", () => {
             deploy: true,
         })
 
-        const leftSide = await ammPool.getLeftSide()
-        const rightSide = await ammPool.getRightSide()
+        const vaultsAndReserves = await ammPool.getVaultsAndReserves()
+        const leftSide = vaultsAndReserves.lowerAmount
+        const rightSide = vaultsAndReserves.higherAmount
 
         // the correct liquidity amount was added
         const sortedWithAmounts = sortAddresses(
@@ -214,11 +215,11 @@ describe("Liquidity deposit", () => {
         expect(vaultALiquidityAddResultBadRatio.transactions).toHaveTransaction({
             from: vaultA.vault.address,
             to: liqSetupBadRatio.liquidityDeposit.address,
-            op: LiquidityDepositContract.opcodes.PartHasBeenDeposited,
+            op: DexOpcodes.PartHasBeenDeposited,
             success: true,
         })
         const statusBadRatio = await liqSetupBadRatio.liquidityDeposit.getStatus()
-        expect(statusBadRatio.leftSideFilled || statusBadRatio.rightSideFilled).toBeTruthy()
+        expect(statusBadRatio.isLowerSideFilled || statusBadRatio.isHigherSideFilled).toBeTruthy()
 
         // a lot of stuff happens here
         // 1. jetton transfer to vaultB
@@ -237,7 +238,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResultBadRatio.transactions).toHaveTransaction({
             from: vaultB.vault.address,
             to: liqSetupBadRatio.liquidityDeposit.address,
-            op: LiquidityDepositContract.opcodes.PartHasBeenDeposited,
+            op: DexOpcodes.PartHasBeenDeposited,
             success: true,
         })
 
@@ -334,11 +335,11 @@ describe("Liquidity deposit", () => {
         expect(vaultALiquidityAddResult.transactions).toHaveTransaction({
             from: vaultA.vault.address,
             to: liqSetup.liquidityDeposit.address,
-            op: LiquidityDepositContract.opcodes.PartHasBeenDeposited,
+            op: DexOpcodes.PartHasBeenDeposited,
             success: true,
         })
         const status = await liqSetup.liquidityDeposit.getStatus()
-        expect(status.leftSideFilled || status.rightSideFilled).toBeTruthy()
+        expect(status.isLowerSideFilled || status.isHigherSideFilled).toBeTruthy()
 
         // deploy vaultB
         const vaultBDeployResult = await vaultB.deploy()
@@ -356,7 +357,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResult.transactions).toHaveTransaction({
             from: vaultB.vault.address,
             to: liqSetup.liquidityDeposit.address,
-            op: LiquidityDepositContract.opcodes.PartHasBeenDeposited,
+            op: DexOpcodes.PartHasBeenDeposited,
             success: true,
         })
 
@@ -373,8 +374,9 @@ describe("Liquidity deposit", () => {
             deploy: true,
         })
 
-        const leftSide = await ammPool.getLeftSide()
-        const rightSide = await ammPool.getRightSide()
+        const vaultsAndReserves = await ammPool.getVaultsAndReserves()
+        const leftSide = vaultsAndReserves.lowerAmount
+        const rightSide = vaultsAndReserves.higherAmount
 
         // the correct liquidity amount was added
         const sortedWithAmounts = sortAddresses(
@@ -443,11 +445,11 @@ describe("Liquidity deposit", () => {
         expect(vaultALiquidityAddResultBadRatio.transactions).toHaveTransaction({
             from: vaultA.vault.address,
             to: liqSetupBadRatio.liquidityDeposit.address,
-            op: LiquidityDepositContract.opcodes.PartHasBeenDeposited,
+            op: DexOpcodes.PartHasBeenDeposited,
             success: true,
         })
         const statusBadRatio = await liqSetupBadRatio.liquidityDeposit.getStatus()
-        expect(statusBadRatio.leftSideFilled || statusBadRatio.rightSideFilled).toBeTruthy()
+        expect(statusBadRatio.isLowerSideFilled || statusBadRatio.isHigherSideFilled).toBeTruthy()
 
         // a lot of stuff happens here
         // 1. ton vault transfer to vaultB
@@ -466,7 +468,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResultBadRatio.transactions).toHaveTransaction({
             from: vaultB.vault.address,
             to: liqSetupBadRatio.liquidityDeposit.address,
-            op: LiquidityDepositContract.opcodes.PartHasBeenDeposited,
+            op: DexOpcodes.PartHasBeenDeposited,
             success: true,
         })
 
@@ -534,7 +536,7 @@ describe("Liquidity deposit", () => {
             expect(addLiquidityWithDeploy.transactions).toHaveTransaction({
                 from: vaultA.vault.address,
                 // to: liquidity deposit contract address,
-                op: LiquidityDepositContract.opcodes.PartHasBeenDeposited,
+                op: DexOpcodes.PartHasBeenDeposited,
                 success: true,
                 deploy: true,
             })
@@ -542,7 +544,7 @@ describe("Liquidity deposit", () => {
             const returnFundsTx = flattenTransaction(
                 findTransactionRequired(addLiquidityWithDeploy.transactions, {
                     from: vaultA.vault.address,
-                    op: LiquidityDepositContract.opcodes.PartHasBeenDeposited,
+                    op: DexOpcodes.PartHasBeenDeposited,
                     success: true,
                     deploy: true,
                 }),

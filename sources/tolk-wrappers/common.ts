@@ -33,6 +33,7 @@ export const storeLpAdditionalParams = (
             .storeUint(lpTimeout, 32)
             .storeMaybeRef(payloadOnSuccess)
             .storeMaybeRef(payloadOnFailure)
+            .endCell()
 
         builder.storeRef(additionalParamsCell)
     }

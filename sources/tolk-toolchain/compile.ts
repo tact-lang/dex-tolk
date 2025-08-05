@@ -1,7 +1,8 @@
 import {Cell} from "@ton/core"
 import {runTolkCompiler, TolkCompilerConfig} from "@ton/tolk-js"
 import {ContractName, DEX_SOURCES} from "./sources"
-import {readFileSync} from "fs"
+import {readFileSync, writeFileSync, mkdirSync} from "fs"
+import {join} from "path"
 
 async function doCompileTolk(config: TolkCompilerConfig) {
     const res = await runTolkCompiler(config)
@@ -36,7 +37,10 @@ export const compileContract = async (name: ContractName) => {
         console.error(result.stderr)
     }
 
-    return result.code
+    return {
+        code: result.code,
+        fift: result.fiftCode,
+    }
 }
 
 const contractNames = () => Object.keys(DEX_SOURCES) as ContractName[]
@@ -45,9 +49,18 @@ export const compileAll = async () => {
     const sources: Record<ContractName, Cell> = {} as any
     const names = contractNames()
 
+    // Ensure output directory exists
+    const outputDir = join(__dirname, "../../sources/fift-output")
+    mkdirSync(outputDir, {recursive: true})
+
     for (const name of names) {
         const codeCell = await compileContract(name as ContractName)
-        sources[name] = codeCell
+        sources[name] = codeCell.code
+
+        // Write Fift code to output file
+        const fiftFileName = `${name}.fif`
+        const fiftFilePath = join(outputDir, fiftFileName)
+        writeFileSync(fiftFilePath, codeCell.fift)
     }
 
     return sources

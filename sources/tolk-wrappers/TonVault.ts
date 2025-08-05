@@ -8,7 +8,7 @@ import {
     Sender,
     SendMode,
 } from "@ton/core"
-import {Op} from "./DexConstants"
+import {DexOpcodes} from "./DexConstants"
 import {storeLiquidityDepositDestination, storeLpAdditionalParams} from "./common"
 
 export type TonVaultConfig = {
@@ -65,7 +65,7 @@ export class TonVault implements Contract {
         } | null,
     ): Cell {
         return beginCell()
-            .storeUint(Op.AddLiquidityPartTon, 32)
+            .storeUint(DexOpcodes.AddLiquidityPartTon, 32)
             .storeCoins(amount)
             .store(
                 storeLiquidityDepositDestination(
