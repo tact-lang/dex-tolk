@@ -207,7 +207,7 @@ fun handleAction(
             }
 
             val storage = lazy JettonVaultStorage.load();
-
+            // TODO: fix error
             val liquidityDepositNotifyMsg = createMessage({
                 body: PartHasBeenDeposited {
                     amount: jettonAmount,
