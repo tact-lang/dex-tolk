@@ -8,7 +8,6 @@ import {createJettonAmmPool, createTonJettonAmmPool} from "../utils/environment-
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {calculateLiquidityProvisioning, calculateLiquidityWithdraw} from "../utils/liquidityMath"
 import {AmmPool} from "../output/DEX_AmmPool"
-import {Op} from "../tolk-wrappers/lp-jettons/JettonConstants"
 
 describe.each([
     {
@@ -20,6 +19,7 @@ describe.each([
         createPool: createTonJettonAmmPool,
     },
 ])("Liquidity math for $name", ({createPool}) => {
+    // TODO: add tests for all combinations of pools (with it.each, it should be the same)
     test("should increase pool reserves by correct amount", async () => {
         const blockchain = await Blockchain.create()
 
@@ -30,8 +30,8 @@ describe.each([
         const amountARaw = toNano(1)
         const amountBRaw = amountARaw * initialRatio // 1 a == 2 b ratio
 
-        const amountA = amountBRaw
-        const amountB = amountARaw
+        const amountA = isSwapped ? amountARaw : amountBRaw
+        const amountB = isSwapped ? amountBRaw : amountARaw
 
         const depositor = vaultB.treasury.walletOwner
 
@@ -52,14 +52,14 @@ describe.each([
 
         // check that first liquidity deposit was successful
         expect(lpBalanceAfterFirstLiq).toEqual(expectedLpAmount.lpTokens)
+
         // check that pool reserves are correct
         const vaultsAndReserves = await ammPool.getVaultsAndReserves()
-        expect(vaultsAndReserves.lowerAmount).toEqual(
-            isSwapped ? expectedLpAmount.reserveB : expectedLpAmount.reserveA,
-        )
-        expect(vaultsAndReserves.higherAmount).toEqual(
-            isSwapped ? expectedLpAmount.reserveA : expectedLpAmount.reserveB,
-        )
+        const leftSide = vaultsAndReserves.lowerAmount
+        const rightSide = vaultsAndReserves.higherAmount
+
+        expect(leftSide).toEqual(expectedLpAmount.reserveA)
+        expect(rightSide).toEqual(expectedLpAmount.reserveB)
     })
 
     test("should increase pool reserves by correct amount with revert", async () => {
@@ -72,9 +72,12 @@ describe.each([
         const amountARaw = toNano(1)
         const amountBRaw = amountARaw * initialRatio // 1 a == 2 b ratio
 
+        const amountA = isSwapped ? amountARaw : amountBRaw
+        const amountB = isSwapped ? amountBRaw : amountARaw
+
         const depositor = vaultB.treasury.walletOwner
 
-        const {getLpWallet} = await initWithLiquidity(depositor, amountARaw, amountBRaw)
+        const {getLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
         const depositorLpWallet = await getLpWallet()
 
         const lpBalanceAfterFirstLiq = await depositorLpWallet.getJettonBalance()
@@ -89,16 +92,19 @@ describe.each([
         const amountABadRatioRaw = toNano(1.1)
         const amountBBadRatioRaw = amountABadRatioRaw * initialRatio * 5n // wrong ratio
 
+        const amountABadRatio = isSwapped ? amountABadRatioRaw : amountBBadRatioRaw
+        const amountBBadRatio = isSwapped ? amountBBadRatioRaw : amountABadRatioRaw
+
         // second add
-        await initWithLiquidity(depositor, amountABadRatioRaw, amountBBadRatioRaw)
+        await initWithLiquidity(depositor, amountABadRatio, amountBBadRatio)
 
         const lpBalanceAfterSecondLiq = await depositorLpWallet.getJettonBalance()
 
         const expectedLpAmountSecondTime = calculateLiquidityProvisioning(
-            isSwapped ? reserveBBefore : reserveABefore,
-            isSwapped ? reserveABefore : reserveBBefore,
-            amountABadRatioRaw,
-            amountBBadRatioRaw,
+            reserveABefore,
+            reserveBBefore,
+            amountABadRatio,
+            amountBBadRatio,
             0n,
             0n,
             lpBalanceAfterFirstLiq,
@@ -112,13 +118,10 @@ describe.each([
         expect(lpAmountMinted).toEqual(expectedLpAmountSecondTime.lpTokens)
 
         // check that pool reserves are correct
-        const reservesAfter = await ammPool.getVaultsAndReserves()
-        expect(reservesAfter.lowerAmount).toEqual(
-            isSwapped ? expectedLpAmountSecondTime.reserveB : expectedLpAmountSecondTime.reserveA,
-        )
-        expect(reservesAfter.higherAmount).toEqual(
-            isSwapped ? expectedLpAmountSecondTime.reserveA : expectedLpAmountSecondTime.reserveB,
-        )
+        const vaultsAndReservesAfter = await ammPool.getVaultsAndReserves()
+
+        expect(vaultsAndReservesAfter.lowerAmount).toEqual(expectedLpAmountSecondTime.reserveA)
+        expect(vaultsAndReservesAfter.higherAmount).toEqual(expectedLpAmountSecondTime.reserveB)
     })
 
     test("should follow math across multiple liquidity additions", async () => {
@@ -131,10 +134,11 @@ describe.each([
 
         const getReserves = async () => {
             try {
-                const reserves = await ammPool.getVaultsAndReserves()
+                const vaultsAndReservesAfter = await ammPool.getVaultsAndReserves()
+
                 return {
-                    left: reserves.lowerAmount,
-                    right: reserves.higherAmount,
+                    left: vaultsAndReservesAfter.lowerAmount,
+                    right: vaultsAndReservesAfter.higherAmount,
                 }
             } catch (error) {
                 return {
@@ -153,19 +157,22 @@ describe.each([
             const amountARaw = BigInt(random(1, 1000))
             const amountBRaw = amountARaw * initialRatio
 
+            const amountA = isSwapped ? amountARaw : amountBRaw
+            const amountB = isSwapped ? amountBRaw : amountARaw
+
             const {left: reserveABefore, right: reserveBBefore} = await getReserves()
 
-            const {getLpWallet} = await initWithLiquidity(depositor, amountARaw, amountBRaw)
+            const {getLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
             const depositorLpWallet = await getLpWallet()
 
             const mintedTotal = await depositorLpWallet.getJettonBalance()
             const lpAmountMinted = mintedTotal === lpAmount ? lpAmount : mintedTotal - lpAmount
 
             const expectedLpAmount = calculateLiquidityProvisioning(
-                isSwapped ? reserveBBefore : reserveABefore,
-                isSwapped ? reserveABefore : reserveBBefore,
-                amountARaw,
-                amountBRaw,
+                reserveABefore,
+                reserveBBefore,
+                amountA,
+                amountB,
                 0n,
                 0n,
                 lpAmount,
@@ -176,14 +183,10 @@ describe.each([
             expect(lpAmountMinted).toBeGreaterThanOrEqual(expectedLpAmount.lpTokens - 1n)
             expect(lpAmountMinted).toBeLessThanOrEqual(expectedLpAmount.lpTokens + 1n)
             // check that pool reserves are correct
-            const reserves = await ammPool.getVaultsAndReserves()
+            const vaultsAndReservesAfter = await ammPool.getVaultsAndReserves()
 
-            expect(reserves.lowerAmount).toEqual(
-                isSwapped ? expectedLpAmount.reserveB : expectedLpAmount.reserveA,
-            )
-            expect(reserves.higherAmount).toEqual(
-                isSwapped ? expectedLpAmount.reserveA : expectedLpAmount.reserveB,
-            )
+            expect(vaultsAndReservesAfter.lowerAmount).toEqual(expectedLpAmount.reserveA)
+            expect(vaultsAndReservesAfter.higherAmount).toEqual(expectedLpAmount.reserveB)
 
             lpAmount = mintedTotal
         }
@@ -199,13 +202,17 @@ describe.each([
         const amountARaw = toNano(1)
         const amountBRaw = amountARaw * initialRatio // 1 a == 2 b ratio
 
+        const amountA = isSwapped ? amountARaw : amountBRaw
+        const amountB = isSwapped ? amountBRaw : amountARaw
+
         const depositor = vaultB.treasury.walletOwner
 
         const {getLpWallet, withdrawLiquidity} = await initWithLiquidity(
             depositor,
-            amountARaw,
-            amountBRaw,
+            amountA,
+            amountB,
         )
+
         const depositorLpWallet = await getLpWallet()
 
         const lpBalanceAfterFirstLiq = await depositorLpWallet.getJettonBalance()
@@ -213,8 +220,8 @@ describe.each([
         const expectedLpAmount = calculateLiquidityProvisioning(
             0n,
             0n,
-            amountARaw,
-            amountBRaw,
+            amountA,
+            amountB,
             0n,
             0n,
             0n,
@@ -232,13 +239,10 @@ describe.each([
             lpBalanceAfterFirstLiq,
         )
 
-        const reserves = await ammPool.getVaultsAndReserves()
-        expect(reserves.lowerAmount).toEqual(
-            isSwapped ? expectedBurnResult.reserveB : expectedBurnResult.reserveA,
-        )
-        expect(reserves.higherAmount).toEqual(
-            isSwapped ? expectedBurnResult.reserveA : expectedBurnResult.reserveB,
-        )
+        const vaultsAndReservesAfter = await ammPool.getVaultsAndReserves()
+
+        expect(vaultsAndReservesAfter.lowerAmount).toEqual(expectedBurnResult.reserveA)
+        expect(vaultsAndReservesAfter.higherAmount).toEqual(expectedBurnResult.reserveB)
 
         const lpBalanceAfterWithdraw = await depositorLpWallet.getJettonBalance()
         expect(lpBalanceAfterWithdraw).toEqual(0n)
@@ -254,13 +258,17 @@ describe.each([
         const amountARaw = toNano(1)
         const amountBRaw = amountARaw * initialRatio // 1 a == 2 b ratio
 
+        const amountA = isSwapped ? amountARaw : amountBRaw
+        const amountB = isSwapped ? amountBRaw : amountARaw
+
         const depositor = vaultB.treasury.walletOwner
 
         const {getLpWallet, withdrawLiquidity} = await initWithLiquidity(
             depositor,
-            amountARaw,
-            amountBRaw,
+            amountA,
+            amountB,
         )
+
         const depositorLpWallet = await getLpWallet()
 
         const lpBalanceAfterFirstLiq = await depositorLpWallet.getJettonBalance()
@@ -268,8 +276,8 @@ describe.each([
         const expectedLpAmount = calculateLiquidityProvisioning(
             0n,
             0n,
-            amountARaw,
-            amountBRaw,
+            amountA,
+            amountB,
             0n,
             0n,
             0n,
@@ -284,19 +292,11 @@ describe.each([
             lpBalanceAfterFirstLiq,
         )
 
-        const lowerBurnAmountMoreThan = isSwapped
-            ? expectedBurnResultSuccess.amountB + 1n
-            : expectedBurnResultSuccess.amountA + 1n
-
-        const higherBurnAmountMoreThan = isSwapped
-            ? expectedBurnResultSuccess.amountA + 1n
-            : expectedBurnResultSuccess.amountB + 1n
-
         // send burn with value more than min, it should fail
         const result = await withdrawLiquidity(
             lpBalanceAfterFirstLiq,
-            lowerBurnAmountMoreThan,
-            higherBurnAmountMoreThan,
+            expectedBurnResultSuccess.amountA + 1n,
+            expectedBurnResultSuccess.amountB + 1n,
             0n,
             null,
         )
@@ -316,20 +316,16 @@ describe.each([
         expect(result.transactions).toHaveTransaction({
             from: depositorLpWallet.address,
             to: ammPool.address,
-            op: Op.burn_notification,
+            op: AmmPool.opcodes.LiquidityWithdrawViaBurnNotification,
             success: false,
-            // TODO: create error codes enum
             exitCode: AmmPool.errors["Pool: Couldn't pay left more than asked"],
         })
 
         // same as before
-        const reserves = await ammPool.getVaultsAndReserves()
-        expect(reserves.lowerAmount).toEqual(
-            isSwapped ? expectedLpAmount.reserveB : expectedLpAmount.reserveA,
-        )
-        expect(reserves.higherAmount).toEqual(
-            isSwapped ? expectedLpAmount.reserveA : expectedLpAmount.reserveB,
-        )
+        const vaultsAndReservesAfter = await ammPool.getVaultsAndReserves()
+
+        expect(vaultsAndReservesAfter.lowerAmount).toEqual(expectedLpAmount.reserveA)
+        expect(vaultsAndReservesAfter.higherAmount).toEqual(expectedLpAmount.reserveB)
 
         // bounces
         const lpBalanceAfterWithdraw = await depositorLpWallet.getJettonBalance()

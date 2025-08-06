@@ -8,13 +8,21 @@ import {AmmPool, loadMintViaJettonTransferInternal, loadPayoutFromPool} from "..
 import {createJettonAmmPool} from "../utils/environment-tolk"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
-import {DexOpcodes} from "../tolk-wrappers/DexConstants"
 
 describe("Liquidity payloads", () => {
     test("should send both successful payloads via LP minting, and send no excesses on first deposit", async () => {
         const blockchain = await Blockchain.create()
-        const {ammPool, vaultA, vaultB, isSwapped, liquidityDepositSetup} =
-            await createJettonAmmPool(blockchain)
+        const {
+            ammPool,
+            vaultA: swappedVaultA,
+            vaultB: swappedVaultB,
+            liquidityDepositSetup,
+            isSwapped,
+        } = await createJettonAmmPool(blockchain)
+
+        const {vaultA, vaultB} = isSwapped
+            ? {vaultA: swappedVaultB, vaultB: swappedVaultA}
+            : {vaultA: swappedVaultA, vaultB: swappedVaultB}
 
         const poolState = (await blockchain.getContract(ammPool.address)).accountState?.type
         expect(poolState === "uninit" || poolState === undefined).toBe(true)
@@ -36,16 +44,16 @@ describe("Liquidity payloads", () => {
         const _ = await vaultA.addLiquidity(
             liqSetup.liquidityDeposit.address,
             amountA,
-            isSwapped ? rightPayloadOnSuccess : leftPayloadOnSuccess,
-            isSwapped ? rightPayloadOnFailure : leftPayloadOnFailure,
+            leftPayloadOnSuccess,
+            leftPayloadOnFailure,
         )
         await vaultB.deploy()
 
         const addSecondPartAndMintLP = await vaultB.addLiquidity(
             liqSetup.liquidityDeposit.address,
             amountB,
-            isSwapped ? leftPayloadOnSuccess : rightPayloadOnSuccess,
-            isSwapped ? leftPayloadOnFailure : rightPayloadOnFailure,
+            rightPayloadOnSuccess,
+            rightPayloadOnFailure,
         )
 
         expect(addSecondPartAndMintLP.transactions).not.toHaveTransaction({
@@ -57,11 +65,12 @@ describe("Liquidity payloads", () => {
             to: vaultB.vault.address,
         })
 
+        const depositorLpWallet = await liqSetup.getLpWallet()
+
         // check LP token mint
-        const lpWallet = await liqSetup.getLpWallet()
         const mintLP = findTransactionRequired(addSecondPartAndMintLP.transactions, {
             from: ammPool.address,
-            to: lpWallet.address,
+            to: depositorLpWallet.address,
             op: AmmPool.opcodes.MintViaJettonTransferInternal,
             success: true,
         })
@@ -79,8 +88,18 @@ describe("Liquidity payloads", () => {
     test("Not-first liquidity deposit should send both successful payloads via LP minting, and one excess with success payload", async () => {
         const blockchain = await Blockchain.create()
 
-        const {ammPool, vaultA, vaultB, initWithLiquidity, liquidityDepositSetup, isSwapped} =
-            await createJettonAmmPool(blockchain)
+        const {
+            ammPool,
+            vaultA: swappedVaultA,
+            vaultB: swappedVaultB,
+            initWithLiquidity,
+            liquidityDepositSetup,
+            isSwapped,
+        } = await createJettonAmmPool(blockchain)
+
+        const {vaultA, vaultB} = isSwapped
+            ? {vaultA: swappedVaultB, vaultB: swappedVaultA}
+            : {vaultA: swappedVaultA, vaultB: swappedVaultB}
 
         const leftPayloadOnSuccess = beginCell().storeStringTail("SuccessLeft").endCell()
         const leftPayloadOnFailure = beginCell().storeStringTail("FailureLeft").endCell()
@@ -117,16 +136,16 @@ describe("Liquidity payloads", () => {
         const _ = await vaultA.addLiquidity(
             liqSetup.liquidityDeposit.address,
             additionalAmountA,
-            isSwapped ? rightPayloadOnSuccess : leftPayloadOnSuccess,
-            isSwapped ? rightPayloadOnFailure : leftPayloadOnFailure,
+            leftPayloadOnSuccess,
+            leftPayloadOnFailure,
         )
         await vaultB.deploy()
 
         const addSecondPartAndMintLP = await vaultB.addLiquidity(
             liqSetup.liquidityDeposit.address,
             additionalAmountB,
-            isSwapped ? leftPayloadOnSuccess : rightPayloadOnSuccess,
-            isSwapped ? leftPayloadOnFailure : rightPayloadOnFailure,
+            rightPayloadOnSuccess,
+            rightPayloadOnFailure,
         )
 
         const mintLPTx = findTransactionRequired(addSecondPartAndMintLP.transactions, {
@@ -147,18 +166,16 @@ describe("Liquidity payloads", () => {
 
         const payExcessTx = findTransactionRequired(addSecondPartAndMintLP.transactions, {
             to: vaultB.vault.address,
-            op: DexOpcodes.PayoutFromPool,
+            op: AmmPool.opcodes.PayoutFromPool,
+            success: true,
         })
         const payoutFromPoolBody = flattenTransaction(payExcessTx).body?.beginParse()
         const parsedPayoutFromPoolBody = loadPayoutFromPool(payoutFromPoolBody!!)
         expect(parsedPayoutFromPoolBody.payloadToForward).toBeDefined()
-        expect(parsedPayoutFromPoolBody.payloadToForward!!).toEqualCell(
-            isSwapped ? leftPayloadOnSuccess : rightPayloadOnSuccess,
-        )
+        expect(parsedPayoutFromPoolBody.payloadToForward!!).toEqualCell(rightPayloadOnSuccess)
     })
 
-    // TODO: liq fail
-    test.skip("should fail when slippage exceeded and return left payload via left vault and right via right", async () => {
+    test("should fail when slippage exceeded and return left payload via left vault and right via right", async () => {
         const blockchain = await Blockchain.create()
 
         const {
@@ -282,8 +299,7 @@ describe("Liquidity payloads", () => {
         // but minimal acceptable amount A is equal to actual amount A
         expect(insufficientLiquidityResult.transactions).toHaveTransaction({
             on: ammPool.address,
-            exitCode:
-                AmmPool.errors["Pool: Liquidity provision failed due to slippage on left side"],
+            exitCode: 27493,
             success: true,
         })
 

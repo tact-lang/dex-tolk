@@ -3,7 +3,7 @@
 
 import {Blockchain, GetMethodError, SandboxContract} from "@ton/sandbox"
 import {createJettonAmmPool, createTonJettonAmmPool} from "../utils/environment"
-import {Address, beginCell, SendMode, toNano, TupleBuilder} from "@ton/core"
+import {Address, beginCell, toNano, TupleBuilder} from "@ton/core"
 import {AmmPool, loadPayoutFromPool} from "../output/DEX_AmmPool"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
