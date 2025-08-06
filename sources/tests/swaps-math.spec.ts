@@ -1,10 +1,10 @@
 import {Blockchain} from "@ton/sandbox"
-import {createJettonAmmPool, createTonJettonAmmPool} from "../utils/environment"
+import {createJettonAmmPool, createTonJettonAmmPool} from "../utils/environment-tolk"
 import {toNano} from "@ton/core"
-import {AmmPool} from "../output/DEX_AmmPool"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {calculateAmountIn, calculateAmountOut, calculateSwapResult} from "../utils/liquidityMath"
+import {DexOpcodes, LiquidityProvidersPoolFee} from "../tolk-wrappers/DexConstants"
 
 const expectEqualTvmToJs = (expected: bigint, got: bigint) => {
     expect(expected).toBeGreaterThanOrEqual(got - 1n)
@@ -40,8 +40,9 @@ describe.each([
 
         await initWithLiquidity(depositor, amountA, amountB)
 
-        const leftReserve = await ammPool.getLeftSide()
-        const rightReserve = await ammPool.getRightSide()
+        const vaultsAndReserves = await ammPool.getVaultsAndReserves()
+        const leftReserve = vaultsAndReserves.lowerAmount
+        const rightReserve = vaultsAndReserves.higherAmount
 
         const reserveA = isSwapped ? rightReserve : leftReserve
         const reserveB = isSwapped ? leftReserve : rightReserve
@@ -49,7 +50,7 @@ describe.each([
         const amountToSwap = BigInt(random(1, 50))
         const expectedOutput = await ammPool.getExpectedOut(vaultA.vault.address, amountToSwap)
 
-        const res = calculateAmountOut(reserveA, reserveB, AmmPool.PoolFee, amountToSwap)
+        const res = calculateAmountOut(reserveA, reserveB, LiquidityProvidersPoolFee, amountToSwap)
 
         // difference in tvm and js rounding
         expectEqualTvmToJs(expectedOutput, res)
@@ -73,8 +74,9 @@ describe.each([
 
         await initWithLiquidity(depositor, amountA, amountB)
 
-        const leftReserve = await ammPool.getLeftSide()
-        const rightReserve = await ammPool.getRightSide()
+        const vaultsAndReserves = await ammPool.getVaultsAndReserves()
+        const leftReserve = vaultsAndReserves.lowerAmount
+        const rightReserve = vaultsAndReserves.higherAmount
 
         const reserveA = isSwapped ? rightReserve : leftReserve
         const reserveB = isSwapped ? leftReserve : rightReserve
@@ -82,7 +84,13 @@ describe.each([
         const amountToSwap = BigInt(random(1, 50))
         const expectedOutput = await ammPool.getExpectedOut(vaultA.vault.address, amountToSwap)
 
-        const res = calculateSwapResult(reserveA, reserveB, AmmPool.PoolFee, amountToSwap, 0n)
+        const res = calculateSwapResult(
+            reserveA,
+            reserveB,
+            LiquidityProvidersPoolFee,
+            amountToSwap,
+            0n,
+        )
 
         const swapResult = await swap(amountToSwap, "vaultA", expectedOutput, 0n, false, null, null)
 
@@ -90,12 +98,13 @@ describe.each([
         expect(swapResult.transactions).toHaveTransaction({
             from: vaultA.vault.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.SwapIn,
+            op: DexOpcodes.SwapIn,
             success: true,
         })
 
-        const leftReserveAfter = await ammPool.getLeftSide()
-        const rightReserveAfter = await ammPool.getRightSide()
+        const vaultsAndReservesAfter = await ammPool.getVaultsAndReserves()
+        const leftReserveAfter = vaultsAndReservesAfter.lowerAmount
+        const rightReserveAfter = vaultsAndReservesAfter.higherAmount
 
         const aReserveAfter = isSwapped ? rightReserveAfter : leftReserveAfter
         const bReserveAfter = isSwapped ? leftReserveAfter : rightReserveAfter
@@ -127,8 +136,9 @@ describe.each([
         // this is different from the previous test since there could be
         // an error with payouts that will appear only in the long term
         for (let index = 0; index < 20; index++) {
-            const leftReserve = await ammPool.getLeftSide()
-            const rightReserve = await ammPool.getRightSide()
+            const vaultsAndReserves = await ammPool.getVaultsAndReserves()
+            const leftReserve = vaultsAndReserves.lowerAmount
+            const rightReserve = vaultsAndReserves.higherAmount
 
             const reserveA = isSwapped ? rightReserve : leftReserve
             const reserveB = isSwapped ? leftReserve : rightReserve
@@ -136,7 +146,13 @@ describe.each([
             const amountToSwap = BigInt(random(1, 50))
             const expectedOutput = await ammPool.getExpectedOut(vaultA.vault.address, amountToSwap)
 
-            const res = calculateSwapResult(reserveA, reserveB, AmmPool.PoolFee, amountToSwap, 0n)
+            const res = calculateSwapResult(
+                reserveA,
+                reserveB,
+                LiquidityProvidersPoolFee,
+                amountToSwap,
+                0n,
+            )
 
             const swapResult = await swap(
                 amountToSwap,
@@ -152,12 +168,13 @@ describe.each([
             expect(swapResult.transactions).toHaveTransaction({
                 from: vaultA.vault.address,
                 to: ammPool.address,
-                op: AmmPool.opcodes.SwapIn,
+                op: DexOpcodes.SwapIn,
                 success: true,
             })
 
-            const leftReserveAfter = await ammPool.getLeftSide()
-            const rightReserveAfter = await ammPool.getRightSide()
+            const vaultsAndReservesAfter = await ammPool.getVaultsAndReserves()
+            const leftReserveAfter = vaultsAndReservesAfter.lowerAmount
+            const rightReserveAfter = vaultsAndReservesAfter.higherAmount
 
             const aReserveAfter = isSwapped ? rightReserveAfter : leftReserveAfter
             const bReserveAfter = isSwapped ? leftReserveAfter : rightReserveAfter
@@ -171,7 +188,7 @@ describe.each([
     test("should correctly return expected in for exact out", async () => {
         const blockchain = await Blockchain.create()
 
-        const {ammPool, vaultB, isSwapped, initWithLiquidity} = await createPool(blockchain)
+        const {ammPool, vaultA, vaultB, isSwapped, initWithLiquidity} = await createPool(blockchain)
 
         const initialRatio = BigInt(random(1, 100))
 
@@ -185,19 +202,25 @@ describe.each([
 
         await initWithLiquidity(depositor, amountA, amountB)
 
-        const leftReserve = await ammPool.getLeftSide()
-        const rightReserve = await ammPool.getRightSide()
+        const vaultsAndReserves = await ammPool.getVaultsAndReserves()
+        const leftReserve = vaultsAndReserves.lowerAmount
+        const rightReserve = vaultsAndReserves.higherAmount
 
         const reserveA = isSwapped ? rightReserve : leftReserve
         const reserveB = isSwapped ? leftReserve : rightReserve
 
         const amountToGetAfterSwap = BigInt(random(1, 50))
-        const expectedInput = await ammPool.getNeededInToGetX(
-            vaultB.vault.address,
+        const expectedInput = await ammPool.getExpectedIn(
+            vaultA.vault.address,
             amountToGetAfterSwap,
         )
 
-        const res = calculateAmountIn(reserveA, reserveB, AmmPool.PoolFee, amountToGetAfterSwap)
+        const res = calculateAmountIn(
+            reserveA,
+            reserveB,
+            LiquidityProvidersPoolFee,
+            amountToGetAfterSwap,
+        )
 
         // difference in tvm and js rounding
         expectEqualTvmToJs(expectedInput, res)

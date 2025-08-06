@@ -5,4 +5,7 @@ export const DexOpcodes = {
     PayoutFromPool: 0x074f7a60,
     SwapRequestTon: 0x698cba08,
     SwapRequestAction: 0xbfa68001,
+    SwapIn: 0xac2f5a38,
 }
+
+export const LiquidityProvidersPoolFee = 3n
