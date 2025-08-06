@@ -31,6 +31,7 @@ import allAccountStateAndProof from "./offline-data/16_last_proofs.json"
 import shardBlockProofs from "./offline-data/shardProofs.json"
 import {lastMcBlocks} from "./offline-data/last-mc-blocks"
 import {randomInt} from "crypto"
+import {DexErrors} from "../tolk-wrappers/DexConstants"
 
 // This function finds the path deepest pruned Cell
 function walk(cell: Cell, depth = 0, path: number[] = [], best: any) {
@@ -193,10 +194,7 @@ describe("Proofs", () => {
             from: tep89proxyAddress,
             op: JettonVault.opcodes.TEP89DiscoveryResult,
             success: true, // Because commit was called
-            exitCode:
-                JettonVault.errors[
-                    "JettonVault: Expected and Actual wallets are not equal or gas for action is not enough"
-                ],
+            exitCode: DexErrors.GAS_LOW_FOR_ACTION,
         })
 
         expect(await vaultSetup.isInited()).toBe(false)
@@ -232,7 +230,7 @@ describe("Proofs", () => {
                 to: vaultSetup.vault.address,
                 op: JettonVault.opcodes.JettonNotifyWithActionRequest,
                 success: true, // Because commit was called
-                exitCode: JettonVault.errors["JettonVault: Unsupported proof type"],
+                exitCode: DexErrors.INVALID_STATE_INIT_PROOF,
             }),
         )
 
@@ -316,10 +314,7 @@ describe("Proofs", () => {
                 to: vaultSetup.vault.address,
                 op: JettonVault.opcodes.JettonNotifyWithActionRequest,
                 success: true, // Because commit() was called
-                exitCode:
-                    JettonVault.errors[
-                        "JettonVault: Sender must be jetton wallet or too low gas for action"
-                    ],
+                exitCode: DexErrors.SENDER_IS_NOT_THE_VAULT_JETTON_WALLET,
             }),
         )
 

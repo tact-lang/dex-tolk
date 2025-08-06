@@ -2,6 +2,7 @@ import "errors"
 import "math"
 import "messages"
 import "storage"
+import "lp-jettons/lp-jettons-messages"
 
 struct TonVaultStorage {
     ammPoolCode: cell
@@ -14,7 +15,11 @@ fun TonVaultStorage.load() {
     return TonVaultStorage.fromCell(contract.getData());
 }
 
-type AllowedMessages = PayoutFromPool | SwapRequestTon | AddLiquidityPartTon
+type AllowedMessages =
+    | PayoutFromPool
+    | SwapRequestTon
+    | AddLiquidityPartTon
+    | JettonTransferNotificationWithVaultAction
 
 fun onInternalMessage(in: InMessage) {
     val msg = lazy AllowedMessages.fromSlice(in.body);
@@ -148,6 +153,9 @@ fun onInternalMessage(in: InMessage) {
                     SEND_MODE_BOUNCE_ON_ACTION_FAIL);
                 }
             }
+        }
+        JettonTransferNotificationWithVaultAction => {
+            msg.refundWithError(in.senderAddress, JETTONS_SENT_TO_TON_VAULT);
         }
         else => {
             val refundMsg = createMessage({

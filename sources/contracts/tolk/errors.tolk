@@ -1,6 +1,7 @@
 // ton vault errors
 const SENDER_SHOULD_BE_AMM_POOL = 8952
 const NOT_ENOUGH_VALUE_FOR_FEES = 12793
+const JETTONS_SENT_TO_TON_VAULT = 39585
 
 // liquidity deposit errors
 const INCORRECT_LIQUIDITY_DEPOSIT_AMOUNT = 27528

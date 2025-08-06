@@ -7,8 +7,8 @@ import {createJettonAmmPool, createTonJettonAmmPool} from "../utils/environment-
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {calculateLiquidityProvisioning, calculateLiquidityWithdraw} from "../utils/liquidityMath"
-import {AmmPool} from "../output/DEX_AmmPool"
 import {Op} from "../tolk-wrappers/lp-jettons/JettonConstants"
+import {DexErrors} from "../tolk-wrappers/DexConstants"
 
 describe.each([
     {
@@ -319,7 +319,7 @@ describe.each([
             to: ammPool.address,
             op: Op.burn_notification,
             success: false,
-            exitCode: AmmPool.errors["Pool: Couldn't pay left more than asked"],
+            exitCode: DexErrors.WITHDRAWN_LIQUIDITY_AMOUNT_IS_LESS_THAN_LIMIT,
         })
 
         // same as before

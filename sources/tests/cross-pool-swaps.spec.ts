@@ -14,12 +14,12 @@ import {
 } from "../utils/environment-tolk"
 
 import {beginCell, toNano} from "@ton/core"
-import {AmmPool, loadPayoutFromPool} from "../output/DEX_AmmPool"
+import {loadPayoutFromPool} from "../output/DEX_AmmPool"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {findTransactionRequired, flattenTransaction, randomAddress} from "@ton/test-utils"
 import {SwapStep} from "../tolk-wrappers/common"
-import {DexOpcodes} from "../tolk-wrappers/DexConstants"
+import {DexOpcodes, DexErrors} from "../tolk-wrappers/DexConstants"
 
 describe("Cross-pool Swaps", () => {
     const createVaults = <A, B, C>(
@@ -290,7 +290,7 @@ describe("Cross-pool Swaps", () => {
             expect(swapResult.transactions).toHaveTransaction({
                 from: firstAmmPool.address,
                 to: secondAmmPool.address,
-                exitCode: AmmPool.errors["Pool: Amount out is less than desired amount"],
+                exitCode: DexErrors.AMOUNT_OUT_IS_LESS_THAN_LIMIT,
             })
 
             const payoutTx = flattenTransaction(

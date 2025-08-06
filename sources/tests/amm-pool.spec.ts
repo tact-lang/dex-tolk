@@ -13,7 +13,7 @@ import {randomInt} from "crypto"
 import {createAmmPoolContract} from "../tolk-toolchain/generator"
 import {AmmPool as AmmPoolTolk} from "../tolk-wrappers/AmmPool"
 import {LpJettonWallet} from "../tolk-wrappers/lp-jettons/LpJettonWallet"
-import {DexOpcodes} from "../tolk-wrappers/DexConstants"
+import {DexOpcodes, DexErrors} from "../tolk-wrappers/DexConstants"
 import {Op} from "../tolk-wrappers/sharded-jettons/JettonConstants"
 
 describe("Amm pool", () => {
@@ -107,7 +107,7 @@ describe("Amm pool", () => {
         expect(swapResult.transactions).toHaveTransaction({
             from: vaultA.vault.address,
             to: ammPool.address, // NOTE: Swap should fail
-            exitCode: AmmPool.errors["Pool: Amount out is less than desired amount"],
+            exitCode: DexErrors.AMOUNT_OUT_IS_LESS_THAN_LIMIT,
             success: true, // That is what happens when throw after commit(), exit code is non-zero, success is true
         })
 
@@ -502,8 +502,7 @@ describe("Amm pool", () => {
                 from: vaultA.vault.address,
                 to: ammPool.address,
                 op: DexOpcodes.SwapIn,
-                exitCode:
-                    AmmPool.errors["Pool: Amount of tokens sent is insufficient for exactOut swap"],
+                exitCode: DexErrors.INSUFFICIENT_IN_AMOUNT_FOR_EXACT_OUT_VALUE,
             })
 
             expect(swapResult.transactions).not.toHaveTransaction({
@@ -681,9 +680,7 @@ describe("Amm pool", () => {
                 if (!(e instanceof GetMethodError)) {
                     throw e
                 }
-                expect(e.exitCode).toEqual(
-                    AmmPool.errors["Pool: Desired amount out is greater than pool reserves"],
-                )
+                expect(e.exitCode).toEqual(DexErrors.INSUFFICIENT_RESERVES_FOR_EXACT_OUT_VALUE)
             }
 
             const tooMuchAmountOut = BigInt(randomInt(2, 4))
@@ -706,7 +703,7 @@ describe("Amm pool", () => {
             expect(swapResult.transactions).toHaveTransaction({
                 to: ammPool.address,
                 from: vaultA.vault.address,
-                exitCode: AmmPool.errors["Pool: Desired amount out is greater than pool reserves"],
+                exitCode: DexErrors.INSUFFICIENT_RESERVES_FOR_EXACT_OUT_VALUE,
             })
             const refundTx = flattenTransaction(
                 findTransactionRequired(swapResult.transactions, {
@@ -744,7 +741,7 @@ describe("Amm pool", () => {
             if (!(e instanceof GetMethodError)) {
                 throw e
             }
-            expect(e.exitCode).toEqual(AmmPool.errors["Pool: No liquidity in pool"])
+            expect(e.exitCode).toEqual(DexErrors.NO_LIQUIDITY_IN_POOL)
         }
 
         try {
@@ -753,7 +750,7 @@ describe("Amm pool", () => {
             if (!(e instanceof GetMethodError)) {
                 throw e
             }
-            expect(e.exitCode).toEqual(AmmPool.errors["Pool: No liquidity in pool"])
+            expect(e.exitCode).toEqual(DexErrors.NO_LIQUIDITY_IN_POOL)
         }
 
         try {
@@ -762,7 +759,7 @@ describe("Amm pool", () => {
             if (!(e instanceof GetMethodError)) {
                 throw e
             }
-            expect(e.exitCode).toEqual(AmmPool.errors["Pool: No liquidity in pool"])
+            expect(e.exitCode).toEqual(DexErrors.NO_LIQUIDITY_IN_POOL)
         }
 
         try {
@@ -771,7 +768,7 @@ describe("Amm pool", () => {
             if (!(e instanceof GetMethodError)) {
                 throw e
             }
-            expect(e.exitCode).toEqual(AmmPool.errors["Pool: No liquidity in pool"])
+            expect(e.exitCode).toEqual(DexErrors.NO_LIQUIDITY_IN_POOL)
         }
     })
 })

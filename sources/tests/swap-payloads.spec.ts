@@ -5,12 +5,12 @@ import {Blockchain} from "@ton/sandbox"
 import {createJettonAmmPool} from "../utils/environment-tolk"
 import {beginCell, toNano} from "@ton/core"
 // TODO: change this imports
-import {AmmPool, loadPayoutFromPool, loadSendViaJettonTransfer} from "../output/DEX_AmmPool"
+import {loadPayoutFromPool, loadSendViaJettonTransfer} from "../output/DEX_AmmPool"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {JettonVault} from "../output/DEX_JettonVault"
 import {findTransactionRequired, flattenTransaction} from "@ton/test-utils"
-import {DexOpcodes} from "../tolk-wrappers/DexConstants"
+import {DexOpcodes, DexErrors} from "../tolk-wrappers/DexConstants"
 
 describe("Payloads", () => {
     test("Successful swap should return success payload", async () => {
@@ -127,7 +127,7 @@ describe("Payloads", () => {
             from: vaultA.vault.address,
             to: ammPool.address,
             op: DexOpcodes.SwapIn,
-            exitCode: AmmPool.errors["Pool: Amount out is less than desired amount"],
+            exitCode: DexErrors.AMOUNT_OUT_IS_LESS_THAN_LIMIT,
         })
 
         const payoutTx = findTransactionRequired(swapResult.transactions, {
@@ -183,7 +183,7 @@ describe("Payloads", () => {
             from: vaultA.vault.address,
             to: ammPool.address,
             op: DexOpcodes.SwapIn,
-            exitCode: AmmPool.errors["Pool: Swap timeout"],
+            exitCode: DexErrors.SWAP_TIMEOUT_EXCEEDED,
         })
 
         const payoutTx = findTransactionRequired(swapResult.transactions, {
