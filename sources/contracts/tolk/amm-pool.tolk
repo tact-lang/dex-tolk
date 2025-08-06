@@ -29,6 +29,7 @@ type AllowedMessages =
     | NotifyPoolAboutLiquidityDeposit
     | SwapIn
     | LiquidityWithdrawViaBurnNotification
+    | RequestWalletAddress
 
 fun onInternalMessage(in: InMessage) {
     val msg = lazy AllowedMessages.fromSlice(in.body);
@@ -215,6 +216,51 @@ fun onInternalMessage(in: InMessage) {
             });
             payoutFromHigherVaultMsg.send(SEND_MODE_BOUNCE_ON_ACTION_FAIL |
             SEND_MODE_CARRY_ALL_BALANCE);
+        }
+        RequestWalletAddress => {
+            var ownerAddress: Cell<address>? = msg.includeOwnerAddress
+                 ? msg.ownerAddress.toCell()
+                 : null;
+
+            var walletAddrBuilt: builder;
+            if (msg.ownerAddress.getWorkchain() == BASECHAIN) {
+                val storage = lazy AmmPoolStorage.load();
+
+                walletAddrBuilt = buildAddressOfLpJettonWallet(
+                    msg.ownerAddress,
+                    contract.getAddress(),
+                    storage.jettonWalletCode
+                );
+            } else {
+                walletAddrBuilt = beginCell().storeAddressNone();
+            }
+            // we could respond `builder` (and it would be much more effective),
+            // but we want to leave the type as `address` in a "Response" struct
+            // (for clarity and future TypeScript wrappers, which can't be auto-generated for "builder");
+            // in TVM 12, there will be a cheap instruction to avoid an intermediate cell creation
+            val walletAddress = address.fromValidBuilder(walletAddrBuilt);
+
+            val respondMsg = createMessage({
+                bounce: false,
+                dest: in.senderAddress,
+                value: 0,
+                body: ResponseWalletAddress {
+                    queryId: msg.queryId,
+                    jettonWalletAddress: walletAddress,
+                    ownerAddress,
+                },
+            });
+            respondMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
+            SEND_MODE_BOUNCE_ON_ACTION_FAIL);
+        }
+        else => {
+            val refundMsg = createMessage({
+                bounce: false,
+                dest: in.senderAddress,
+                value: 0,
+            });
+
+            refundMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
         }
     }
 }

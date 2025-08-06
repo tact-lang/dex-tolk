@@ -7,7 +7,9 @@ import {
     ContractProvider,
     Sender,
     SendMode,
+    toNano,
 } from "@ton/core"
+import {Op} from "./lp-jettons/JettonConstants"
 
 export type AmmPoolConfig = {
     lowerVault: Address
@@ -52,6 +54,31 @@ export class AmmPool implements Contract {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell().endCell(),
+        })
+    }
+
+    /* provide_wallet_address#2c76b973 query_id:uint64 owner_address:MsgAddress include_address:Bool = InternalMsgBody;
+     */
+    static discoveryMessage(owner: Address, includeAddress: boolean) {
+        return beginCell()
+            .storeUint(Op.provide_wallet_address, 32)
+            .storeUint(0, 64) // op, queryId
+            .storeAddress(owner)
+            .storeBit(includeAddress)
+            .endCell()
+    }
+
+    async sendDiscovery(
+        provider: ContractProvider,
+        via: Sender,
+        owner: Address,
+        includeAddress: boolean,
+        value: bigint = toNano("0.1"),
+    ) {
+        await provider.internal(via, {
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: AmmPool.discoveryMessage(owner, includeAddress),
+            value: value,
         })
     }
 
