@@ -13,6 +13,8 @@ import {randomInt} from "crypto"
 import {createAmmPoolContract} from "../tolk-toolchain/generator"
 import {AmmPool as AmmPoolTolk} from "../tolk-wrappers/AmmPool"
 import {LpJettonWallet} from "../tolk-wrappers/lp-jettons/LpJettonWallet"
+import {DexOpcodes} from "../tolk-wrappers/DexConstants"
+import {Op} from "../tolk-wrappers/sharded-jettons/JettonConstants"
 
 describe("Amm pool", () => {
     test("should swap exact amount of jetton to jetton", async () => {
@@ -49,21 +51,21 @@ describe("Amm pool", () => {
         expect(swapResult.transactions).toHaveTransaction({
             from: vaultA.vault.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.SwapIn,
+            op: DexOpcodes.SwapIn,
             success: true,
         })
 
         expect(swapResult.transactions).toHaveTransaction({
             from: ammPool.address,
             to: vaultB.vault.address,
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
 
         expect(swapResult.transactions).toHaveTransaction({
             // TODO: from: vaultB.jettonWallet
             to: vaultB.treasury.wallet.address,
-            op: AmmPool.opcodes.JettonTransferInternal,
+            op: Op.internal_transfer,
             success: true,
         })
 
@@ -152,20 +154,20 @@ describe("Amm pool", () => {
         expect(withdrawResult.transactions).toHaveTransaction({
             from: depositorLpWallet.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.LiquidityWithdrawViaBurnNotification,
+            op: Op.burn_notification,
             success: true,
         })
         expect(withdrawResult.transactions).toHaveTransaction({
             from: ammPool.address,
             to: vaultA.vault.address,
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
 
         expect(withdrawResult.transactions).toHaveTransaction({
             from: ammPool.address,
             to: vaultB.vault.address,
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
 
@@ -211,14 +213,14 @@ describe("Amm pool", () => {
         expect(swapResult.transactions).toHaveTransaction({
             from: vaultB.vault.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.SwapIn,
+            op: DexOpcodes.SwapIn,
             success: true,
         })
 
         expect(swapResult.transactions).toHaveTransaction({
             from: ammPool.address,
             to: vaultA.vault.address,
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
 
@@ -271,20 +273,20 @@ describe("Amm pool", () => {
         expect(swapResult.transactions).toHaveTransaction({
             from: vaultA.vault.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.SwapIn,
+            op: DexOpcodes.SwapIn,
             success: true,
         })
 
         expect(swapResult.transactions).toHaveTransaction({
             from: ammPool.address,
             to: vaultB.vault.address,
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
 
         expect(swapResult.transactions).toHaveTransaction({
             to: vaultB.treasury.wallet.address,
-            op: AmmPool.opcodes.JettonTransferInternal,
+            op: Op.internal_transfer,
             success: true,
         })
 
@@ -340,7 +342,7 @@ describe("Amm pool", () => {
                 from: ammPool.address,
                 to: deployer.address,
                 body: beginCell()
-                    .storeUint(AmmPool.opcodes.TakeWalletAddress, 32)
+                    .storeUint(Op.take_wallet_address, 32)
                     .storeUint(0, 64)
                     .storeAddress(deployerJettonWallet.address)
                     .storeUint(1, 1)
@@ -362,7 +364,7 @@ describe("Amm pool", () => {
                 from: ammPool.address,
                 to: deployer.address,
                 body: beginCell()
-                    .storeUint(AmmPool.opcodes.TakeWalletAddress, 32)
+                    .storeUint(Op.take_wallet_address, 32)
                     .storeUint(0, 64)
                     .storeAddress(notDeployerJettonWallet.address)
                     .storeUint(1, 1)
@@ -382,7 +384,7 @@ describe("Amm pool", () => {
                 from: ammPool.address,
                 to: deployer.address,
                 body: beginCell()
-                    .storeUint(AmmPool.opcodes.TakeWalletAddress, 32)
+                    .storeUint(Op.take_wallet_address, 32)
                     .storeUint(0, 64)
                     .storeAddress(notDeployerJettonWallet.address)
                     .storeUint(0, 1)
@@ -415,7 +417,7 @@ describe("Amm pool", () => {
                 from: ammPool.address,
                 to: deployer.address,
                 body: beginCell()
-                    .storeUint(AmmPool.opcodes.TakeWalletAddress, 32)
+                    .storeUint(Op.take_wallet_address, 32)
                     .storeUint(0, 64)
                     .storeUint(0, 2) // addr_none
                     .storeUint(0, 1)
@@ -441,7 +443,7 @@ describe("Amm pool", () => {
                 from: ammPool.address,
                 to: deployer.address,
                 body: beginCell()
-                    .storeUint(AmmPool.opcodes.TakeWalletAddress, 32)
+                    .storeUint(Op.take_wallet_address, 32)
                     .storeUint(0, 64)
                     .storeUint(0, 2) // addr_none
                     .storeUint(1, 1)
@@ -499,7 +501,7 @@ describe("Amm pool", () => {
             expect(swapResult.transactions).toHaveTransaction({
                 from: vaultA.vault.address,
                 to: ammPool.address,
-                op: AmmPool.opcodes.SwapIn,
+                op: DexOpcodes.SwapIn,
                 exitCode:
                     AmmPool.errors["Pool: Amount of tokens sent is insufficient for exactOut swap"],
             })
@@ -513,7 +515,7 @@ describe("Amm pool", () => {
                 findTransactionRequired(swapResult.transactions, {
                     from: ammPool.address,
                     to: vaultA.vault.address,
-                    op: AmmPool.opcodes.PayoutFromPool,
+                    op: DexOpcodes.PayoutFromPool,
                 }),
             )
             if (returnFundsTx.body === undefined) {
@@ -539,7 +541,7 @@ describe("Amm pool", () => {
             expect(swapResult.transactions).toHaveTransaction({
                 from: vaultA.vault.address,
                 to: ammPool.address,
-                op: AmmPool.opcodes.SwapIn,
+                op: DexOpcodes.SwapIn,
                 exitCode: 0,
                 success: true,
             })
@@ -554,7 +556,7 @@ describe("Amm pool", () => {
                 findTransactionRequired(swapResult.transactions, {
                     from: ammPool.address,
                     to: vaultB.vault.address,
-                    op: AmmPool.opcodes.PayoutFromPool,
+                    op: DexOpcodes.PayoutFromPool,
                     exitCode: 0,
                 }),
             )
@@ -614,7 +616,7 @@ describe("Amm pool", () => {
             expect(swapResult.transactions).toHaveTransaction({
                 from: vaultA.vault.address,
                 to: ammPool.address,
-                op: AmmPool.opcodes.SwapIn,
+                op: DexOpcodes.SwapIn,
                 exitCode: 0,
                 success: true,
             })
@@ -623,7 +625,7 @@ describe("Amm pool", () => {
                 findTransactionRequired(swapResult.transactions, {
                     from: ammPool.address,
                     to: vaultA.vault.address,
-                    op: AmmPool.opcodes.PayoutFromPool,
+                    op: DexOpcodes.PayoutFromPool,
                     exitCode: 0,
                 }),
             )
@@ -640,7 +642,7 @@ describe("Amm pool", () => {
                 findTransactionRequired(swapResult.transactions, {
                     from: ammPool.address,
                     to: vaultB.vault.address,
-                    op: AmmPool.opcodes.PayoutFromPool,
+                    op: DexOpcodes.PayoutFromPool,
                     exitCode: 0,
                 }),
             )
@@ -710,7 +712,7 @@ describe("Amm pool", () => {
                 findTransactionRequired(swapResult.transactions, {
                     from: ammPool.address,
                     to: vaultA.vault.address,
-                    op: AmmPool.opcodes.PayoutFromPool,
+                    op: DexOpcodes.PayoutFromPool,
                     exitCode: 0,
                 }),
             )

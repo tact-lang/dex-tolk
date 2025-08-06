@@ -139,6 +139,11 @@ export class AmmPool implements Contract {
         return stack.readBigNumber()
     }
 
+    async getReserveForVault(provider: ContractProvider, vault: Address) {
+        const reserves = await this.getVaultsAndReserves(provider)
+        return vault.equals(reserves.lowerVault) ? reserves.lowerAmount : reserves.higherAmount
+    }
+
     async getWalletAddress(provider: ContractProvider, owner: Address): Promise<Address> {
         const res = await provider.get("get_wallet_address", [
             {

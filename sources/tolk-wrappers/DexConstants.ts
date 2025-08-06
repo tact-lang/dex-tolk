@@ -6,6 +6,7 @@ export const DexOpcodes = {
     SwapRequestTon: 0x698cba08,
     SwapRequestAction: 0xbfa68001,
     SwapIn: 0xac2f5a38,
+    LiquidityDeposit: 0x642b7d07,
 }
 
 export const LiquidityProvidersPoolFee = 3n

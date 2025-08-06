@@ -4,10 +4,12 @@
 import {beginCell, toNano} from "@ton/core"
 import {Blockchain} from "@ton/sandbox"
 import {findTransactionRequired, flattenTransaction} from "@ton/test-utils"
-import {AmmPool, loadMintViaJettonTransferInternal, loadPayoutFromPool} from "../output/DEX_AmmPool"
+import {loadMintViaJettonTransferInternal, loadPayoutFromPool} from "../output/DEX_AmmPool"
 import {createJettonAmmPool} from "../utils/environment-tolk"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
+import {Op} from "../tolk-wrappers/lp-jettons/JettonConstants"
+import {DexOpcodes} from "../tolk-wrappers/DexConstants"
 
 describe("Liquidity payloads", () => {
     test("should send both successful payloads via LP minting, and send no excesses on first deposit", async () => {
@@ -71,7 +73,7 @@ describe("Liquidity payloads", () => {
         const mintLP = findTransactionRequired(addSecondPartAndMintLP.transactions, {
             from: ammPool.address,
             to: depositorLpWallet.address,
-            op: AmmPool.opcodes.MintViaJettonTransferInternal,
+            op: Op.internal_transfer,
             success: true,
         })
         const transferBody = flattenTransaction(mintLP).body?.beginParse()
@@ -151,7 +153,7 @@ describe("Liquidity payloads", () => {
         const mintLPTx = findTransactionRequired(addSecondPartAndMintLP.transactions, {
             from: ammPool.address,
             to: depositorLpWallet.address,
-            op: AmmPool.opcodes.MintViaJettonTransferInternal,
+            op: Op.internal_transfer,
             success: true,
         })
         const mintBody = flattenTransaction(mintLPTx).body?.beginParse()
@@ -166,7 +168,7 @@ describe("Liquidity payloads", () => {
 
         const payExcessTx = findTransactionRequired(addSecondPartAndMintLP.transactions, {
             to: vaultB.vault.address,
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
         const payoutFromPoolBody = flattenTransaction(payExcessTx).body?.beginParse()
@@ -252,14 +254,14 @@ describe("Liquidity payloads", () => {
         expect(exactLiquidityResult.transactions).toHaveTransaction({
             from: liqSetupExact.liquidityDeposit.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.LiquidityDeposit,
+            op: DexOpcodes.LiquidityDeposit,
             success: true,
         })
 
         // LP tokens should be minted
         expect(exactLiquidityResult.transactions).toHaveTransaction({
             from: ammPool.address,
-            op: AmmPool.opcodes.MintViaJettonTransferInternal,
+            op: Op.internal_transfer,
             success: true,
         })
 
@@ -308,7 +310,7 @@ describe("Liquidity payloads", () => {
         expect(insufficientLiquidityResult.transactions).toHaveTransaction({
             from: liqSetupInsufficient.liquidityDeposit.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.LiquidityDeposit,
+            op: DexOpcodes.LiquidityDeposit,
             success: true,
         })
 
@@ -316,7 +318,7 @@ describe("Liquidity payloads", () => {
         const payoutFromPoolA = findTransactionRequired(insufficientLiquidityResult.transactions, {
             from: ammPool.address,
             to: vaultA.vault.address,
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
         const payoutFromPoolABody = flattenTransaction(payoutFromPoolA).body?.beginParse()
@@ -327,7 +329,7 @@ describe("Liquidity payloads", () => {
         const payoutFromPoolB = findTransactionRequired(insufficientLiquidityResult.transactions, {
             from: ammPool.address,
             to: vaultB.vault.address,
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
         const payoutFromPoolBBody = flattenTransaction(payoutFromPoolB).body?.beginParse()
@@ -337,7 +339,7 @@ describe("Liquidity payloads", () => {
         expect(insufficientLiquidityResult.transactions).toHaveTransaction({
             from: ammPool.address,
             to: vaultB.vault.address,
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
 
@@ -386,7 +388,7 @@ describe("Liquidity payloads", () => {
         const payoutFromPoolA = findTransactionRequired(withdrawResultWithPayloads.transactions, {
             from: ammPool.address,
             to: vaultA.vault.address,
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
         const payoutFromPoolABody = flattenTransaction(payoutFromPoolA).body?.beginParse()
@@ -399,7 +401,7 @@ describe("Liquidity payloads", () => {
         const payoutFromPoolB = findTransactionRequired(withdrawResultWithPayloads.transactions, {
             from: ammPool.address,
             to: vaultB.vault.address,
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
         const payoutFromPoolBBody = flattenTransaction(payoutFromPoolB).body?.beginParse()

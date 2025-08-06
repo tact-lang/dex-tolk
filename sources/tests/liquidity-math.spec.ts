@@ -8,6 +8,7 @@ import {createJettonAmmPool, createTonJettonAmmPool} from "../utils/environment-
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {calculateLiquidityProvisioning, calculateLiquidityWithdraw} from "../utils/liquidityMath"
 import {AmmPool} from "../output/DEX_AmmPool"
+import {Op} from "../tolk-wrappers/lp-jettons/JettonConstants"
 
 describe.each([
     {
@@ -316,7 +317,7 @@ describe.each([
         expect(result.transactions).toHaveTransaction({
             from: depositorLpWallet.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.LiquidityWithdrawViaBurnNotification,
+            op: Op.burn_notification,
             success: false,
             exitCode: AmmPool.errors["Pool: Couldn't pay left more than asked"],
         })

@@ -11,13 +11,15 @@ import {
     JettonTreasury,
     TonTreasury,
     VaultInterface,
-} from "../utils/environment"
+} from "../utils/environment-tolk"
 
 import {beginCell, toNano} from "@ton/core"
 import {AmmPool, loadPayoutFromPool} from "../output/DEX_AmmPool"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {findTransactionRequired, flattenTransaction, randomAddress} from "@ton/test-utils"
+import {SwapStep} from "../tolk-wrappers/common"
+import {DexOpcodes} from "../tolk-wrappers/DexConstants"
 
 describe("Cross-pool Swaps", () => {
     const createVaults = <A, B, C>(
@@ -93,11 +95,13 @@ describe("Cross-pool Swaps", () => {
         }
 
         const firstLP = await initWithLiquidityFirst(depositor, amountA, amountB)
-        expect(await firstLP.depositorLpWallet.getJettonBalance()).toBeGreaterThan(0)
+
+        const depositorLpWallet = await firstLP.getLpWallet()
+        expect(await depositorLpWallet.getJettonBalance()).toBeGreaterThan(0)
 
         // Multiply by 2 only to get different values for the second pool
-        const secondLP = await initWithLiquiditySecond(depositor, amountA * 2n, amountB * 2n)
-        expect(await secondLP.depositorLpWallet.getJettonBalance()).toBeGreaterThan(0)
+        await initWithLiquiditySecond(depositor, amountA * 2n, amountB * 2n)
+        expect(await depositorLpWallet.getJettonBalance()).toBeGreaterThan(0)
 
         const amountToSwap = toNano(0.1)
         const expectedOutFirst = await firstAmmPool.getExpectedOut(
@@ -108,12 +112,11 @@ describe("Cross-pool Swaps", () => {
             firstPoolVaultB.vault.address,
             expectedOutFirst,
         )
-        const nextSwapStep = {
-            $$type: "SwapStep",
+        const nextSwapStep: SwapStep = {
             pool: secondAmmPool.address,
             minAmountOut: expectedOutSecond,
             nextStep: null,
-        } as const
+        }
 
         const inVaultOnFirst = firstPoolVaultA.vault.address
         const outVaultOnFirst = firstPoolVaultB.vault.address
@@ -124,6 +127,7 @@ describe("Cross-pool Swaps", () => {
             secondPoolVaultA.vault.address.equals(inVaultOnSecond) ||
                 secondPoolVaultB.vault.address.equals(inVaultOnSecond),
         ).toBeTruthy()
+
         const outVaultOnSecond = secondPoolVaultA.vault.address.equals(inVaultOnSecond)
             ? secondPoolVaultB.vault.address
             : secondPoolVaultA.vault.address
@@ -152,7 +156,7 @@ describe("Cross-pool Swaps", () => {
         expect(swapResult.transactions).toHaveTransaction({
             from: firstPoolVaultA.vault.address,
             to: firstAmmPool.address,
-            op: AmmPool.opcodes.SwapIn,
+            op: DexOpcodes.SwapIn,
             success: true,
         })
 
@@ -160,7 +164,7 @@ describe("Cross-pool Swaps", () => {
         expect(swapResult.transactions).toHaveTransaction({
             from: firstAmmPool.address,
             to: secondAmmPool.address,
-            op: AmmPool.opcodes.SwapIn,
+            op: DexOpcodes.SwapIn,
             success: true,
         })
 
@@ -170,7 +174,7 @@ describe("Cross-pool Swaps", () => {
         const payoutTx = flattenTransaction(
             findTransactionRequired(swapResult.transactions, {
                 from: secondAmmPool.address,
-                op: AmmPool.opcodes.PayoutFromPool,
+                op: DexOpcodes.PayoutFromPool,
                 success: true,
             }),
         )
@@ -232,11 +236,12 @@ describe("Cross-pool Swaps", () => {
             }
 
             const firstLP = await initWithLiquidityFirst(depositor, amountA, amountB)
-            expect(await firstLP.depositorLpWallet.getJettonBalance()).toBeGreaterThan(0)
+            const depositorLpWallet = await firstLP.getLpWallet()
+            expect(await depositorLpWallet.getJettonBalance()).toBeGreaterThan(0)
 
             // Multiply by 2 only to get different values for the second pool
-            const secondLP = await initWithLiquiditySecond(depositor, amountA * 2n, amountB * 2n)
-            expect(await secondLP.depositorLpWallet.getJettonBalance()).toBeGreaterThan(0)
+            await initWithLiquiditySecond(depositor, amountA * 2n, amountB * 2n)
+            expect(await depositorLpWallet.getJettonBalance()).toBeGreaterThan(0)
 
             const amountToSwap = toNano(0.1)
             const expectedOutFirst = await firstAmmPool.getExpectedOut(
@@ -292,7 +297,7 @@ describe("Cross-pool Swaps", () => {
                 findTransactionRequired(swapResult.transactions, {
                     from: secondAmmPool.address,
                     to: inVaultOnSecond,
-                    op: AmmPool.opcodes.PayoutFromPool,
+                    op: DexOpcodes.PayoutFromPool,
                 }),
             )
             if (payoutTx.body === undefined) {
@@ -325,9 +330,11 @@ describe("Cross-pool Swaps", () => {
 
         const amountToGet = toNano(0.05)
         // No excesses should be sent as the result of ExactOut swap
-        const amountToSend = await ammPool.getNeededInToGetX(vaultB.vault.address, amountToGet)
+        const amountToSend = await ammPool.getExpectedIn(vaultA.vault.address, amountToGet)
+
         const randomCashbackAddress = randomAddress()
         const randomNextPool = randomAddress()
+
         const nextSwapStep = {
             $$type: "SwapStep",
             pool: randomNextPool,
@@ -335,6 +342,7 @@ describe("Cross-pool Swaps", () => {
             minAmountOut: amountToGet,
             nextStep: null,
         } as const
+
         const swapResult = await swap(
             amountToSend,
             "vaultA",
@@ -349,7 +357,7 @@ describe("Cross-pool Swaps", () => {
         expect(swapResult.transactions).toHaveTransaction({
             from: vaultA.vault.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.SwapIn,
+            op: DexOpcodes.SwapIn,
             success: true,
             exitCode: 0,
         })
@@ -364,13 +372,15 @@ describe("Cross-pool Swaps", () => {
             findTransactionRequired(swapResult.transactions, {
                 from: ammPool.address,
                 to: vaultB.vault.address,
-                op: AmmPool.opcodes.PayoutFromPool,
+                op: DexOpcodes.PayoutFromPool,
             }),
         )
         if (payoutRes.body === undefined) {
             throw new Error("Payout transaction body is undefined")
         }
+
         const parsedPayout = loadPayoutFromPool(payoutRes.body.asSlice())
+
         expect(parsedPayout.amount).toEqual(amountToGet)
         expect(parsedPayout.otherVault).toEqualAddress(vaultA.vault.address)
         expect(parsedPayout.payloadToForward).toEqualCell(payloadOnSuccess)

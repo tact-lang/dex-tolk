@@ -55,7 +55,7 @@ export type VaultInterface<T> = {
         cashbackAddress: Address | null,
         payloadOnSuccess: Cell | null,
         payloadOnFailure: Cell | null,
-        nextStep: null, // TODO: SwapStep
+        nextStep: SwapStep | null, // TODO: SwapStep
         receiver: Address | null,
     ) => Promise<SandboxSendResult>
 }
@@ -642,8 +642,7 @@ export const createAmmPool = async <T, U>(
         cashbackAddress: Address | null = null,
         payloadOnSuccess: Cell | null = null,
         payloadOnFailure: Cell | null = null,
-        // TODO: swap step
-        nextSwapStep: null = null,
+        nextSwapStep: SwapStep | null = null,
         receiver: Address | null = null,
     ) => {
         let swapRes

@@ -4,7 +4,6 @@
 import {toNano} from "@ton/core"
 import {Blockchain} from "@ton/sandbox"
 import {findTransactionRequired, flattenTransaction, randomAddress} from "@ton/test-utils"
-import {AmmPool} from "../output/DEX_AmmPool"
 import {
     createJettonAmmPool,
     createJettonVault,
@@ -16,6 +15,7 @@ import {sortAddresses} from "../utils/deployUtils"
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {DexOpcodes} from "../tolk-wrappers/DexConstants"
 import {LpJettonWallet} from "../tolk-wrappers/lp-jettons/LpJettonWallet"
+import {Op} from "../tolk-wrappers/lp-jettons/JettonConstants"
 
 describe("Liquidity deposit", () => {
     test("Jetton vault should deploy correctly", async () => {
@@ -132,7 +132,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResult.transactions).toHaveTransaction({
             from: liqSetup.liquidityDeposit.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.LiquidityDeposit,
+            op: DexOpcodes.LiquidityDeposit,
             success: true,
             deploy: true,
         })
@@ -157,7 +157,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResult.transactions).toHaveTransaction({
             from: ammPool.address,
             to: depositorLpWallet.address,
-            op: AmmPool.opcodes.MintViaJettonTransferInternal,
+            op: Op.internal_transfer,
             success: true,
         })
 
@@ -249,7 +249,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResultBadRatio.transactions).toHaveTransaction({
             from: liqSetupBadRatio.liquidityDeposit.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.LiquidityDeposit,
+            op: DexOpcodes.LiquidityDeposit,
             success: true,
         })
 
@@ -257,7 +257,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResultBadRatio.transactions).toHaveTransaction({
             from: ammPool.address,
             to: sorted.higher, // TODO: add dynamic test why we revert B here
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
 
@@ -372,7 +372,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResult.transactions).toHaveTransaction({
             from: liqSetup.liquidityDeposit.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.LiquidityDeposit,
+            op: DexOpcodes.LiquidityDeposit,
             success: true,
             deploy: true,
         })
@@ -397,7 +397,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResult.transactions).toHaveTransaction({
             from: ammPool.address,
             to: depositorLpWallet.address,
-            op: AmmPool.opcodes.MintViaJettonTransferInternal,
+            op: Op.internal_transfer,
             success: true,
         })
 
@@ -482,7 +482,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResultBadRatio.transactions).toHaveTransaction({
             from: liqSetupBadRatio.liquidityDeposit.address,
             to: ammPool.address,
-            op: AmmPool.opcodes.LiquidityDeposit,
+            op: DexOpcodes.LiquidityDeposit,
             success: true,
         })
 
@@ -490,7 +490,7 @@ describe("Liquidity deposit", () => {
         expect(vaultBLiquidityAddResultBadRatio.transactions).toHaveTransaction({
             from: ammPool.address,
             to: isSwapped ? vaultA.vault.address : vaultB.vault.address, // TODO: add dynamic test why we revert B here
-            op: AmmPool.opcodes.PayoutFromPool,
+            op: DexOpcodes.PayoutFromPool,
             success: true,
         })
 
