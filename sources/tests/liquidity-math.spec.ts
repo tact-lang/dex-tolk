@@ -20,7 +20,6 @@ describe.each([
         createPool: createTonJettonAmmPool,
     },
 ])("Liquidity math for $name", ({createPool}) => {
-    // TODO: add tests for all combinations of pools (with it.each, it should be the same)
     test("should increase pool reserves by correct amount", async () => {
         const blockchain = await Blockchain.create()
 

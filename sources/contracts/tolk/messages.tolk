@@ -1,4 +1,4 @@
-struct (0x74f7a60) PayoutFromPool {
+struct (0x074f7a60) PayoutFromPool {
     otherVault: address
     amount: coins
     receiver: address
