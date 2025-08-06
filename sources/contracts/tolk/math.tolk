@@ -15,30 +15,34 @@ fun sortAddresses(a: address, b: address): SortedAddresses {
     val (_, aHash) = a.getWorkchainAndHash();
     val (_, bHash) = b.getWorkchainAndHash();
 
-    if (aHash < bHash) {
-        return { lower: a, higher: b };
+    var result: SortedAddresses = { lower: a, higher: b };
+
+    if (aHash > bHash) {
+        result = { lower: b, higher: a };
     }
-    return { lower: b, higher: a };
+    return result;
 }
 
 fun sortAddressesAndAmounts(a: address, b: address, aAmount: coins, bAmount: coins): SortedAddressesAndAmounts {
     val (_, aHash) = a.getWorkchainAndHash();
     val (_, bHash) = b.getWorkchainAndHash();
 
-    if (aHash < bHash) {
-        return {
-            lower: a,
-            higher: b,
-            lowerAmount: aAmount,
-            higherAmount: bAmount,
+    var result = SortedAddressesAndAmounts {
+        lower: a,
+        higher: b,
+        lowerAmount: aAmount,
+        higherAmount: bAmount,
+    };
+
+    if (aHash > bHash) {
+        result = {
+            lower: b,
+            higher: a,
+            lowerAmount: bAmount,
+            higherAmount: aAmount,
         };
     }
-    return {
-        lower: b,
-        higher: a,
-        lowerAmount: bAmount,
-        higherAmount: aAmount,
-    };
+    return result;
 }
 
 @pure

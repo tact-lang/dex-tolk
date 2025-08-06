@@ -32,6 +32,7 @@ fun calcLpTokensAmountAfterFirstDeposit(
     );
 }
 
+@inline_ref
 fun handleReservesUpdate(
     lowerAmount: coins,
     higherAmount: coins,
@@ -67,7 +68,16 @@ fun handleReservesUpdate(
         );
 
         if (balancedHigherAmount < higherAdditionalParams.minAmountToDeposit) {
-            // TODO: fail lp
+            failLiquidityProvision(
+                storage.lowerVault,
+                storage.higherVault,
+                lowerAmount,
+                higherAmount,
+                lowerAdditionalParams.payloadOnFailure,
+                higherAdditionalParams.payloadOnFailure,
+                lpTokensReceiver,
+                inValue
+            );
             throw LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED;
         }
 
@@ -114,7 +124,16 @@ fun handleReservesUpdate(
     );
 
     if (balancedLowerAmount < lowerAdditionalParams.minAmountToDeposit) {
-        // TODO: fail lp
+        failLiquidityProvision(
+            storage.lowerVault,
+            storage.higherVault,
+            lowerAmount,
+            higherAmount,
+            lowerAdditionalParams.payloadOnFailure,
+            higherAdditionalParams.payloadOnFailure,
+            lpTokensReceiver,
+            inValue
+        );
         throw LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED;
     }
 
@@ -179,4 +198,45 @@ fun calcWithdrawalAmounts(burnedLpJTokensAmount: coins, parameters: LiquidityWit
     ) throw WITHDRAWN_LIQUIDITY_AMOUNT_IS_LESS_THAN_LIMIT;
 
     return (lowerAmountOut, higherAmountOut);
+}
+
+// a lot of ulgy parameters, but it will be nicely inlined
+// so doesn't matter
+fun failLiquidityProvision(
+    lowerVault: address,
+    higherVault: address,
+    lowerAmount: coins,
+    higherAmount: coins,
+    lowerPayloadOnFailure: cell?,
+    higherPayloadOnFailure: cell?,
+    lpTokensReceiver: address,
+    inValue: coins,
+) {
+    val refundLpLower = createMessage({
+        body: PayoutFromPool {
+            amount: lowerAmount,
+            otherVault: higherVault,
+            receiver: lpTokensReceiver,
+            payloadToForward: lowerPayloadOnFailure,
+        },
+        bounce: false,
+        dest: lowerVault,
+        value: getHalfOfTheMsgValue(inValue),
+    });
+    refundLpLower.send(SEND_MODE_REGULAR | SEND_MODE_IGNORE_ERRORS);
+
+    val refundLpHigher = createMessage({
+        body: PayoutFromPool {
+            amount: higherAmount,
+            otherVault: lowerVault,
+            receiver: lpTokensReceiver,
+            payloadToForward: higherPayloadOnFailure,
+        },
+        bounce: false,
+        dest: higherVault,
+        value: 0,
+    });
+    refundLpHigher.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS);
+
+    commitContractDataAndActions();
 }
