@@ -30,9 +30,6 @@ fun address.isOnBasechain(self) {
     return self.getWorkchain() == BASECHAIN;
 }
 
-fun createSliceWithOneZeroBit(): slice
-    asm "b{0} PUSHSLICE"
-
 type AllowedMessagesForJettonVault = JettonTransferNotificationWithVaultAction | PayoutFromPool
 
 fun onInternalMessage(in: InMessage) {
@@ -48,25 +45,7 @@ fun onInternalMessage(in: InMessage) {
                     checkProof(msg.jettonVaultPayload.proof, storage.jettonMaster, in.senderAddress);
                 } catch (error) {
                     // refund if error
-                    val refundMsg = createMessage({
-                        body: AskToTransfer {
-                            queryId: msg.queryId,
-                            jettonAmount: msg.jettonAmount,
-                            transferRecipient: msg.transferInitiator,
-                            sendExcessesTo: msg.transferInitiator,
-                            customPayload: null,
-                            forwardTonAmount: 1,
-                            forwardPayload: createSliceWithOneZeroBit(),
-                        },
-                        bounce: false,
-                        dest: in.senderAddress,
-                        value: 0,
-                    });
-                    refundMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
-                    SEND_MODE_IGNORE_ERRORS);
-
-                    commitContractDataAndActions();
-                    throw error;
+                    msg.refundWithError(in.senderAddress, error);
                 }
 
                 // if we passed the proof check, we can save new address
@@ -76,12 +55,10 @@ fun onInternalMessage(in: InMessage) {
             }
 
             if (in.senderAddress != storage.jettonWallet!) {
-                //  TODO: return funds
-                commitContractDataAndActions();
-                throw 100;
+                msg.refundWithError(in.senderAddress, SENDER_IS_NOT_THE_VAULT_JETTON_WALLET);
             }
 
-            val result = handleAction(
+            val isEnoughGasForaction = handleAction(
                 msg.jettonVaultPayload.action,
                 msg.jettonAmount,
                 msg.transferInitiator,
@@ -89,10 +66,8 @@ fun onInternalMessage(in: InMessage) {
                 in.senderAddress
             );
 
-            if (!result) {
-                //  TODO: return funds
-                commitContractDataAndActions();
-                throw 100;
+            if (!isEnoughGasForaction) {
+                msg.refundWithError(in.senderAddress, GAS_LOW_FOR_ACTION);
             }
         }
         PayoutFromPool => {

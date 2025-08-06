@@ -238,6 +238,7 @@ get fun expectedOut(inVault: address, inAmount: coins) {
     assert (storage.isAddressOneOfTheVaults(inVault)) throw MSG_NOT_FROM_VAULTS;
 
     val ctx = storage.getSwapContext(inVault);
+    assert (ctx.inReserve != 0 && ctx.outReserve != 0) throw NO_LIQUIDITY_IN_POOL;
 
     val amountInWithAppliedPoolFee = calcAmountInWithPoolFeeApplied(inAmount);
     val updatedInReserveWithAppliedFee = ctx.inReserve + amountInWithAppliedPoolFee;

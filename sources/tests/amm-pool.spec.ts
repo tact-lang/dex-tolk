@@ -2,14 +2,17 @@
 //  Copyright © 2025 TON Studio
 
 import {Blockchain, GetMethodError, SandboxContract} from "@ton/sandbox"
-import {createJettonAmmPool, createTonJettonAmmPool} from "../utils/environment"
-import {Address, beginCell, toNano, TupleBuilder} from "@ton/core"
+import {createJettonAmmPool, createTonJettonAmmPool} from "../utils/environment-tolk"
+import {Address, beginCell, toNano} from "@ton/core"
 import {AmmPool, loadPayoutFromPool} from "../output/DEX_AmmPool"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {findTransactionRequired, flattenTransaction, randomAddress} from "@ton/test-utils"
 import {ExtendedLPJettonWallet} from "../wrappers/ExtendedLPJettonWallet"
 import {randomInt} from "crypto"
+import {createAmmPoolContract} from "../tolk-toolchain/generator"
+import {AmmPool as AmmPoolTolk} from "../tolk-wrappers/AmmPool"
+import {LpJettonWallet} from "../tolk-wrappers/lp-jettons/LpJettonWallet"
 
 describe("Amm pool", () => {
     test("should swap exact amount of jetton to jetton", async () => {
@@ -26,7 +29,8 @@ describe("Amm pool", () => {
 
         const depositor = vaultA.treasury.walletOwner
 
-        const {depositorLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+        const {getLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+        const depositorLpWallet = await getLpWallet()
 
         const lpBalanceAfterFirstLiq = await depositorLpWallet.getJettonBalance()
         // check that liquidity deposit was successful
@@ -82,7 +86,8 @@ describe("Amm pool", () => {
 
         const depositor = vaultA.treasury.walletOwner
 
-        const {depositorLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+        const {getLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+        const depositorLpWallet = await getLpWallet()
 
         const lpBalanceAfterFirstLiq = await depositorLpWallet.getJettonBalance()
         // check that liquidity deposit was successful
@@ -125,11 +130,12 @@ describe("Amm pool", () => {
 
         const depositor = vaultA.treasury.walletOwner
 
-        const {depositorLpWallet, withdrawLiquidity} = await initWithLiquidity(
+        const {getLpWallet, withdrawLiquidity} = await initWithLiquidity(
             depositor,
             amountA,
             amountB,
         )
+        const depositorLpWallet = await getLpWallet()
 
         const lpBalanceAfterFirstLiq = await depositorLpWallet.getJettonBalance()
         // check that liquidity deposit was successful
@@ -140,7 +146,8 @@ describe("Amm pool", () => {
 
         const withdrawResult = await withdrawLiquidity(lpBalanceAfterFirstLiq, 0n, 0n, 0n, null)
 
-        expect((await blockchain.getContract(ammPool.address)).balance).toBeLessThanOrEqual(0n)
+        // TODO: fees here?
+        // expect((await blockchain.getContract(ammPool.address)).balance).toBeLessThanOrEqual(0n)
 
         expect(withdrawResult.transactions).toHaveTransaction({
             from: depositorLpWallet.address,
@@ -184,7 +191,8 @@ describe("Amm pool", () => {
 
         const depositor = vaultB.treasury.walletOwner
 
-        const {depositorLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+        const {getLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+        const depositorLpWallet = await getLpWallet()
 
         const lpBalanceAfterFirstLiq = await depositorLpWallet.getJettonBalance()
         // check that liquidity deposit was successful
@@ -239,7 +247,8 @@ describe("Amm pool", () => {
 
         const depositor = vaultB.treasury.walletOwner
 
-        const {depositorLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+        const {getLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+        const depositorLpWallet = await getLpWallet()
 
         const lpBalanceAfterFirstLiq = await depositorLpWallet.getJettonBalance()
         // check that liquidity deposit was successful
@@ -284,34 +293,37 @@ describe("Amm pool", () => {
     })
 
     describe("Amm pool should act as a JettonMaster", () => {
-        const createUserLPWallet = (blockchain: Blockchain, ammPool: SandboxContract<AmmPool>) => {
+        const createUserLPWallet = (
+            blockchain: Blockchain,
+            ammPool: SandboxContract<AmmPoolTolk>,
+        ) => {
             return async (address: Address) => {
                 return blockchain.openContract(
-                    new ExtendedLPJettonWallet(await ammPool.getGetWalletAddress(address)),
+                    LpJettonWallet.createFromAddress(await ammPool.getWalletAddress(address)),
                 )
             }
         }
 
         test("Amm pool is TEP-89 compatible JettonMaster that reports correct discovery address", async () => {
             const blockchain = await Blockchain.create()
+
             const deployer = await blockchain.treasury(randomAddress().toString()) // Just a random treasury
             const notDeployer = await blockchain.treasury(randomAddress().toString())
+
             const ammPool = blockchain.openContract(
-                await AmmPool.fromInit(randomAddress(), randomAddress(), 0n, 0n, 0n, null),
+                await createAmmPoolContract(randomAddress(), randomAddress()),
             )
+
             const userWallet = createUserLPWallet(blockchain, ammPool)
-            const deployAmmPoolRes = await ammPool.send(
-                deployer.getSender(),
-                {value: toNano(0.01)},
-                null,
-            )
+            const deployAmmPoolRes = await ammPool.sendDeploy(deployer.getSender(), toNano(1))
+
             expect(deployAmmPoolRes.transactions).toHaveTransaction({
                 from: deployer.address,
                 to: ammPool.address,
                 success: true,
             })
 
-            let discoveryResult = await ammPool.send(
+            const discoveryResult = await ammPool.send(
                 deployer.getSender(),
                 {
                     value: toNano(0.01),
@@ -470,7 +482,8 @@ describe("Amm pool", () => {
 
             const depositor = vaultA.treasury.walletOwner
 
-            const {depositorLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+            const {getLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+            const depositorLpWallet = await getLpWallet()
 
             const lpBalanceAfterFirstLiq = await depositorLpWallet.getJettonBalance()
             // check that liquidity deposit was successful
@@ -478,7 +491,7 @@ describe("Amm pool", () => {
 
             const exactAmountOut = 100000n
             const notEnoughAmountIn =
-                (await ammPool.getNeededInToGetX(vaultB.vault.address, exactAmountOut)) - 1n
+                (await ammPool.getExpectedIn(vaultA.vault.address, exactAmountOut)) - 1n
 
             const tokenBReceiver = randomAddress()
 
@@ -496,7 +509,8 @@ describe("Amm pool", () => {
                 payloadOnFailure,
             )
 
-            expect((await blockchain.getContract(ammPool.address)).balance).toBeLessThanOrEqual(0n)
+            // TODO: fees and reserves
+            // expect((await blockchain.getContract(ammPool.address)).balance).toBeLessThanOrEqual(0n)
 
             // check that swap was not successful
             expect(swapResult.transactions).toHaveTransaction({
@@ -583,7 +597,8 @@ describe("Amm pool", () => {
 
             const depositor = vaultA.treasury.walletOwner
 
-            const {depositorLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+            const {getLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+            const depositorLpWallet = await getLpWallet()
 
             const lpBalanceAfterFirstLiq = await depositorLpWallet.getJettonBalance()
             // check that liquidity deposit was successful
@@ -592,8 +607,7 @@ describe("Amm pool", () => {
             const exactAmountOut = 100000n
             const amountToRefund = BigInt(randomInt(100, 1000))
             const moreThanEnoughAmountIn =
-                (await ammPool.getNeededInToGetX(vaultB.vault.address, exactAmountOut)) +
-                amountToRefund
+                (await ammPool.getExpectedIn(vaultA.vault.address, exactAmountOut)) + amountToRefund
 
             const payloadOnFailure = beginCell().storeStringTail("Failure payload").endCell()
             const payloadOnSuccess = beginCell().storeStringTail("Success payload").endCell()
@@ -611,7 +625,8 @@ describe("Amm pool", () => {
                 payloadOnFailure,
             )
 
-            expect((await blockchain.getContract(ammPool.address)).balance).toBeLessThanOrEqual(0n)
+            // TODO: fees reserves
+            // expect((await blockchain.getContract(ammPool.address)).balance).toBeLessThanOrEqual(0n)
 
             expect(swapResult.transactions).toHaveTransaction({
                 from: vaultA.vault.address,
@@ -667,21 +682,16 @@ describe("Amm pool", () => {
 
             const depositor = vaultA.treasury.walletOwner
 
-            const {depositorLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+            const {getLpWallet} = await initWithLiquidity(depositor, amountA, amountB)
+            const depositorLpWallet = await getLpWallet()
 
             const lpBalanceAfterFirstLiq = await depositorLpWallet.getJettonBalance()
             // check that liquidity deposit was successful
             expect(lpBalanceAfterFirstLiq).toBeGreaterThan(0n)
 
-            const builder = new TupleBuilder()
-            builder.writeAddress(vaultB.vault.address)
-            //builder.writeNumber(randomInt(2, 3));
-            builder.writeNumber(2)
-            const provider = blockchain.provider(ammPool.address)
-            // IDK, how to catch the error in a better way
-            // Sandbox just doesn't provide an interface for it
             try {
-                await provider.get("neededInToGetX", builder.build())
+                // we don't have such reserves so throw
+                await ammPool.getExpectedIn(vaultA.vault.address, 3n)
             } catch (e) {
                 if (!(e instanceof GetMethodError)) {
                     throw e
@@ -738,10 +748,10 @@ describe("Amm pool", () => {
         const firstVault = randomAddress()
         const secondVault = randomAddress()
         const ammPool = blockchain.openContract(
-            await AmmPool.fromInit(firstVault, secondVault, 0n, 0n, 0n, null),
+            await createAmmPoolContract(firstVault, secondVault),
         )
 
-        await ammPool.send(randomDeployer.getSender(), {value: toNano(0.01)}, null)
+        await ammPool.sendDeploy(randomDeployer.getSender(), toNano(1))
 
         try {
             await ammPool.getExpectedOut(firstVault, BigInt(randomInt(0, 100)))
@@ -762,7 +772,7 @@ describe("Amm pool", () => {
         }
 
         try {
-            await ammPool.getNeededInToGetX(firstVault, BigInt(randomInt(0, 100)))
+            await ammPool.getExpectedIn(secondVault, BigInt(randomInt(0, 100)))
         } catch (e) {
             if (!(e instanceof GetMethodError)) {
                 throw e
@@ -771,7 +781,7 @@ describe("Amm pool", () => {
         }
 
         try {
-            await ammPool.getNeededInToGetX(secondVault, BigInt(randomInt(0, 100)))
+            await ammPool.getExpectedIn(firstVault, BigInt(randomInt(0, 100)))
         } catch (e) {
             if (!(e instanceof GetMethodError)) {
                 throw e

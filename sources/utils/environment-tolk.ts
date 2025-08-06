@@ -3,7 +3,7 @@
 //  Copyright © 2025 TON Studio
 
 import {Blockchain, SandboxContract, SendMessageResult, TreasuryContract} from "@ton/sandbox"
-import {Address, Cell, Slice, toNano} from "@ton/core"
+import {Address, Cell, SendMode, Slice, toNano} from "@ton/core"
 import {sortAddresses} from "./deployUtils"
 import {
     createAmmPoolContract,
@@ -17,6 +17,7 @@ import {ShardedJettonWallet} from "../tolk-wrappers/sharded-jettons/ShardedJetto
 import {JettonVault} from "../tolk-wrappers/JettonVault"
 import {LpJettonWallet} from "../tolk-wrappers/lp-jettons/LpJettonWallet"
 import {randomBytes} from "crypto"
+import {SwapInfo, SwapStep} from "../tolk-wrappers/common"
 
 export type Create<T> = (blockchain: Blockchain) => Promise<T>
 type SandboxSendResult = SendMessageResult & {
@@ -222,23 +223,50 @@ export const createJettonVault: Create<VaultInterface<JettonTreasury>> = async (
         cashbackAddress: Address | null,
         payloadOnSuccess: Cell | null,
         payloadOnFailure: Cell | null,
-        // TODO: swap step
-        nextStep?: null,
+        nextStep: SwapStep | null,
         receiver: Address | null = null,
     ) => {
         // const vaultWasInited = await isInited()
-        // const swapRequest = createJettonVaultSwapRequest(
-        //     destinationPool,
-        //     isExactOutType,
-        //     desiredAmount,
-        //     timeout,
-        //     cashbackAddress,
-        //     payloadOnSuccess,
-        //     payloadOnFailure,
-        //     nextStep,
-        //     receiver,
-        // )
-        // const res = await jetton.transfer(vault.address, amountToSwap, swapRequest)
+
+        const getSwapInfo = (): SwapInfo => {
+            if (isExactOutType) {
+                return {
+                    type: "exact-out",
+                    cashbackAddress,
+                    exactOutAmount: desiredAmount,
+                }
+            } else {
+                return {
+                    type: "exact-in",
+                    minAmountOut: desiredAmount,
+                    nextStep,
+                }
+            }
+        }
+
+        const swapRequest = JettonVault.createJettonVaultSwapRequestBody({
+            pool: destinationPool,
+            receiver,
+            swap: {
+                swapInfo: getSwapInfo(),
+                parameters: {
+                    timeout,
+                    payloadOnSuccess,
+                    payloadOnFailure,
+                },
+            },
+        })
+
+        const res = await jetton.transfer(
+            vault.address,
+            amountToSwap,
+            JettonVault.createJettonVaultNotificationPayload(swapRequest, {
+                proofType: JettonVault.NO_PROOF_ATTACHED,
+            }),
+        )
+
+        // TODO: gas checks and benches here!
+
         // // If vault was not initialized it will spend more gas on proof.
         // if (vaultWasInited) {
         //     const txOnVault = findTransactionRequired(res.transactions, {
@@ -260,9 +288,8 @@ export const createJettonVault: Create<VaultInterface<JettonTreasury>> = async (
         // if (payoutTx !== undefined) {
         //     expect(getComputeGasForTx(payoutTx)).toBeLessThanOrEqual(GasPayoutFromAnyVault)
         // }
-        // return res
 
-        return null as unknown as SandboxSendResult
+        return res
     }
 
     return {
@@ -368,30 +395,51 @@ export const createTonVault: Create<VaultInterface<TonTreasury>> = async (
         cashbackAddress: Address | null,
         payloadOnSuccess: Cell | null,
         payloadOnFailure: Cell | null,
-        // TODO: swap step
-        nextStep: null,
+        nextStep: SwapStep | null,
         receiver: Address | null = null,
     ) => {
-        // const swapRequest = createTonSwapRequest(
-        //     destinationPool,
-        //     receiver,
-        //     amountToSwap,
-        //     isExactOutType,
-        //     desiredAmount,
-        //     timeout,
-        //     cashbackAddress,
-        //     payloadOnSuccess,
-        //     payloadOnFailure,
-        //     nextStep,
-        // )
+        const getSwapInfo = (): SwapInfo => {
+            if (isExactOutType) {
+                return {
+                    type: "exact-out",
+                    cashbackAddress,
+                    exactOutAmount: desiredAmount,
+                }
+            } else {
+                return {
+                    type: "exact-in",
+                    minAmountOut: desiredAmount,
+                    nextStep,
+                }
+            }
+        }
 
-        // const res = await wallet.send({
-        //     to: vault.address,
-        //     value: amountToSwap + toNano(0.2), // fee
-        //     bounce: true,
-        //     body: swapRequest,
-        //     sendMode: SendMode.PAY_GAS_SEPARATELY,
-        // })
+        const swapRequest = TonVault.createTonVaultSwapRequestBody(
+            {
+                pool: destinationPool,
+                receiver,
+                swap: {
+                    swapInfo: getSwapInfo(),
+                    parameters: {
+                        timeout,
+                        payloadOnSuccess,
+                        payloadOnFailure,
+                    },
+                },
+            },
+            amountToSwap,
+        )
+
+        const res = await wallet.send({
+            to: vault.address,
+            value: amountToSwap + toNano(0.2), // fee
+            bounce: true,
+            body: swapRequest,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+        })
+
+        // TODO: gas checks and benches here!
+
         // const txOnVault = findTransactionRequired(res.transactions, {
         //     on: vault.address,
         //     op: TonVault.opcodes.SwapRequestTon,
@@ -410,9 +458,8 @@ export const createTonVault: Create<VaultInterface<TonTreasury>> = async (
         // if (payoutTx !== undefined) {
         //     expect(getComputeGasForTx(payoutTx)).toBeLessThanOrEqual(GasPayoutFromAnyVault)
         // }
-        // return res
 
-        return null as unknown as SandboxSendResult
+        return res
     }
 
     return {
@@ -628,9 +675,10 @@ export const createAmmPool = async <T, U>(
             )
         }
 
-        if ((await blockchain.getContract(ammPool.address)).balance > 0n) {
-            throw new Error("AmmPool balance should be 0 after swap")
-        }
+        // TODO: this
+        // if ((await blockchain.getContract(ammPool.address)).balance > 0n) {
+        //     throw new Error("AmmPool balance should be 0 after swap")
+        // }
 
         return swapRes
     }

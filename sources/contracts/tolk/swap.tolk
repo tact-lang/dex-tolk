@@ -229,7 +229,7 @@ fun handleSwap(
                 value: 0,
             });
 
-            payoutFromVaultMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+            payoutFromVaultMsg.send(SEND_MODE_CARRY_ALL_BALANCE);
         }
     }
 

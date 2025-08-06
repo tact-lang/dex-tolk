@@ -9,7 +9,12 @@ import {
     SendMode,
 } from "@ton/core"
 import {DexOpcodes} from "./DexConstants"
-import {storeLiquidityDepositDestination, storeLpAdditionalParams} from "./common"
+import {
+    storeLiquidityDepositDestination,
+    storeLpAdditionalParams,
+    storeSwapRequest,
+    SwapRequest,
+} from "./common"
 
 export type TonVaultConfig = {
     ammPoolCode: Cell
@@ -82,6 +87,14 @@ export class TonVault implements Contract {
                 ),
             )
             .storeMaybeInternalAddress(lpTokensReceiver)
+            .endCell()
+    }
+
+    static createTonVaultSwapRequestBody(swapRequest: SwapRequest, amount: bigint) {
+        return beginCell()
+            .storeUint(DexOpcodes.SwapRequestTon, 32)
+            .storeCoins(amount)
+            .storeRef(beginCell().store(storeSwapRequest(swapRequest)).endCell())
             .endCell()
     }
 }

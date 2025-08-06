@@ -11,7 +11,12 @@ import {
     Slice,
 } from "@ton/core"
 import {DexOpcodes} from "./DexConstants"
-import {storeLiquidityDepositDestination, storeLpAdditionalParams} from "./common"
+import {
+    storeLiquidityDepositDestination,
+    storeLpAdditionalParams,
+    storeSwapRequest,
+    SwapRequest,
+} from "./common"
 
 export type JettonVaultConfig = {
     jettonMaster: Address
@@ -21,7 +26,7 @@ export type JettonVaultConfig = {
 }
 
 export type NoProof = {
-    proofType: typeof JettonVault.PROOF_NO_PROOF_ATTACHED
+    proofType: typeof JettonVault.NO_PROOF_ATTACHED
 }
 
 export type MinterDiscoveryProof = {
@@ -61,7 +66,7 @@ export class JettonVault implements Contract {
         readonly init?: {code: Cell; data: Cell},
     ) {}
 
-    static readonly PROOF_NO_PROOF_ATTACHED = 0n
+    static readonly NO_PROOF_ATTACHED = 0n
     static readonly MINTER_DISCOVERY_PROOF = 1n
     static readonly ONCHAIN_GETTER_PROOF = 2n
     static readonly PROOF_STATE_TO_THE_BLOCK = 3n
@@ -100,7 +105,7 @@ export class JettonVault implements Contract {
             b.storeUint(proof.proofType, 4)
 
             switch (proof.proofType) {
-                case JettonVault.PROOF_NO_PROOF_ATTACHED:
+                case JettonVault.NO_PROOF_ATTACHED:
                     break
                 case JettonVault.MINTER_DISCOVERY_PROOF:
                     break
@@ -164,5 +169,12 @@ export class JettonVault implements Contract {
                 .endCell()
                 .asSlice()
         )
+    }
+
+    static createJettonVaultSwapRequestBody(swapRequest: SwapRequest) {
+        return beginCell()
+            .storeUint(DexOpcodes.SwapRequestAction, 32)
+            .store(storeSwapRequest(swapRequest))
+            .endCell()
     }
 }

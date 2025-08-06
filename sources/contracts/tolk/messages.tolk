@@ -1,3 +1,5 @@
+import "lp-jettons/lp-jettons-messages.tolk"
+
 struct (0x074f7a60) PayoutFromPool {
     otherVault: address
     amount: coins
@@ -176,4 +178,29 @@ struct (0x7362d09c) JettonTransferNotificationWithVaultAction {
     transferInitiator: address
     // we want payload to be stored inline
     jettonVaultPayload: JettonVaultNotificationPaylaod
+}
+
+fun createSliceWithOneZeroBit(): slice
+    asm "b{0} PUSHSLICE"
+
+fun JettonTransferNotificationWithVaultAction.refundWithError(self, sender: address, error: int) {
+    val refundMsg = createMessage({
+        body: AskToTransfer {
+            queryId: self.queryId,
+            jettonAmount: self.jettonAmount,
+            transferRecipient: self.transferInitiator,
+            sendExcessesTo: self.transferInitiator,
+            forwardTonAmount: 1,
+            forwardPayload: createSliceWithOneZeroBit(),
+            customPayload: null,
+        },
+        bounce: false,
+        dest: sender,
+        value: 0,
+    });
+
+    refundMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_IGNORE_ERRORS);
+
+    commitContractDataAndActions();
+    throw error;
 }
