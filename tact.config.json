@@ -1,0 +1,34 @@
+{
+    "projects": [
+        {
+            "name": "DEX",
+            "path": "./sources/contracts/infra/factory.tact",
+            "output": "./sources/output",
+            "mode": "full",
+            "options": {
+                "external": false,
+                "debug": true,
+                "ipfsAbiGetter": false,
+                "interfacesGetter": false,
+                "experimental": {
+                    "inline": true
+                }
+            }
+        },
+        {
+            "name": "Jetton",
+            "path": "./sources/contracts/jettons/jetton-minter.tact",
+            "output": "./sources/output",
+            "mode": "full",
+            "options": {
+                "external": false,
+                "debug": false,
+                "ipfsAbiGetter": false,
+                "interfacesGetter": false,
+                "experimental": {
+                    "inline": true
+                }
+            }
+        }
+    ]
+}
