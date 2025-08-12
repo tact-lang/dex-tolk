@@ -37,14 +37,16 @@ struct Swap {
 }
 
 fun Swap.getNumberOfHops(self): int {
+    var result = 1;
+
     match (self.swapInfo) {
-        ExactOutSwap => {
-            return 1;
-        }
+        ExactOutSwap => {}
         ExactInSwap => {
-            return self.swapInfo.nextStep.depth() + 1;
+            result = self.swapInfo.nextStep.depth() + 1;
         }
     }
+
+    return result;
 }
 
 struct SwapRequest {
