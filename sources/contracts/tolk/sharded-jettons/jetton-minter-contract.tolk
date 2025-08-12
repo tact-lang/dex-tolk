@@ -34,7 +34,13 @@ fun onInternalMessage(in: InMessage) {
     match (msg) {
         BurnNotificationForMinter => {
             var storage = lazy MinterStorage.load();
-            assert (in.senderAddress.isAddressOfJettonWallet(msg.burnInitiator, contract.getAddress(), storage.jettonWalletCode)) throw ERROR_NOT_VALID_WALLET;
+            assert (
+                in.senderAddress.isAddressOfJettonWallet(
+                    msg.burnInitiator,
+                    contract.getAddress(),
+                    storage.jettonWalletCode
+                )
+            ) throw ERROR_NOT_VALID_WALLET;
             storage.totalSupply -= msg.jettonAmount;
             storage.save();
 
@@ -46,22 +52,24 @@ fun onInternalMessage(in: InMessage) {
                 bounce: false,
                 dest: msg.sendExcessesTo,
                 value: 0,
-                body: ReturnExcessesBack {
-                    queryId: msg.queryId
-                }
+                body: ReturnExcessesBack { queryId: msg.queryId },
             });
             excessesMsg.send(SEND_MODE_IGNORE_ERRORS | SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
         }
 
         RequestWalletAddress => {
             var ownerAddress: Cell<address>? = msg.includeOwnerAddress
-                ? msg.ownerAddress.toCell()
-                : null;
+                 ? msg.ownerAddress.toCell()
+                 : null;
 
             var walletAddrBuilt: builder;
             if (msg.ownerAddress.getWorkchain() == MY_WORKCHAIN) {
                 val storage = lazy MinterStorage.load();
-                walletAddrBuilt = buildAddressOfJettonWallet(msg.ownerAddress, contract.getAddress(), storage.jettonWalletCode);
+                walletAddrBuilt = buildAddressOfJettonWallet(
+                    msg.ownerAddress,
+                    contract.getAddress(),
+                    storage.jettonWalletCode
+                );
             } else {
                 walletAddrBuilt = beginCell().storeAddressNone();
             }
@@ -78,10 +86,11 @@ fun onInternalMessage(in: InMessage) {
                 body: ResponseWalletAddress {
                     queryId: msg.queryId,
                     jettonWalletAddress: walletAddress,
-                    ownerAddress: ownerAddress,
-                }
+                    ownerAddress,
+                },
             });
-            respondMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE | SEND_MODE_BOUNCE_ON_ACTION_FAIL);
+            respondMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE |
+            SEND_MODE_BOUNCE_ON_ACTION_FAIL);
         }
 
         MintNewJettons => {
@@ -90,7 +99,7 @@ fun onInternalMessage(in: InMessage) {
             assert (msg.mintRecipient.getWorkchain() == MY_WORKCHAIN) throw ERROR_WRONG_WORKCHAIN;
 
             val internalTransferMsg = lazy msg.internalTransferMsg.load({
-                throwIfOpcodeDoesNotMatch: ERROR_INVALID_OP
+                throwIfOpcodeDoesNotMatch: ERROR_INVALID_OP,
             });
             var forwardTonAmount = internalTransferMsg.forwardTonAmount;
             internalTransferMsg.forwardPayload.checkIsCorrectTLBEither();
@@ -105,7 +114,11 @@ fun onInternalMessage(in: InMessage) {
 
             val deployMsg = createMessage({
                 bounce: true,
-                dest: calcDeployedJettonWallet(msg.mintRecipient, contract.getAddress(), storage.jettonWalletCode),
+                dest: calcDeployedJettonWallet(
+                    msg.mintRecipient,
+                    contract.getAddress(),
+                    storage.jettonWalletCode
+                ),
                 value: msg.tonAmount,
                 body: msg.internalTransferMsg,
             });
@@ -153,11 +166,9 @@ fun onInternalMessage(in: InMessage) {
             // just accept tons
         }
 
-        else => throw 0xFFFF
+        else => throw 0xFFFF,
     }
 }
-
-
 
 struct JettonDataReply {
     totalSupply: int
@@ -168,7 +179,7 @@ struct JettonDataReply {
 }
 
 struct (0x00) OnchainMetadataReply {
-    contentDict: dict       // map from sha256(key) to Cell<SnakeDataReply>
+    contentDict: dict // map from sha256(key) to Cell<SnakeDataReply>
 }
 
 struct (0x00) SnakeDataReply {
@@ -177,9 +188,7 @@ struct (0x00) SnakeDataReply {
 
 get fun get_jetton_data(): JettonDataReply {
     val storage = lazy MinterStorage.load();
-    var metadata: OnchainMetadataReply = {
-        contentDict: createEmptyDict()
-    };
+    var metadata: OnchainMetadataReply = { contentDict: createEmptyDict() };
     metadata.contentDict.setMetadataEntry(stringSha256("uri"), storage.metadataUri.load());
     metadata.contentDict.setMetadataEntry(stringSha256("decimals"), "9");
 
@@ -189,12 +198,16 @@ get fun get_jetton_data(): JettonDataReply {
         adminAddress: storage.adminAddress,
         jettonContent: metadata.toCell(),
         jettonWalletCode: storage.jettonWalletCode,
-    }
+    };
 }
 
 get fun get_wallet_address(ownerAddress: address): address {
     val storage = lazy MinterStorage.load();
-    val addrBuilt = buildAddressOfJettonWallet(ownerAddress, contract.getAddress(), storage.jettonWalletCode);
+    val addrBuilt = buildAddressOfJettonWallet(
+        ownerAddress,
+        contract.getAddress(),
+        storage.jettonWalletCode
+    );
     return address.fromValidBuilder(addrBuilt);
 }
 

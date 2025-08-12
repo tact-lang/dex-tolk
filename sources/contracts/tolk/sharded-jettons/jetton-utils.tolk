@@ -10,23 +10,26 @@ fun calcDeployedJettonWallet(ownerAddress: address, minterAddress: address, jett
 
     return {
         workchain: MY_WORKCHAIN,
-        stateInit: {
-            code: jettonWalletCode,
-            data: emptyWalletStorage.toCell()
-        },
-        toShard: {
-            fixedPrefixLength: SHARD_DEPTH,
-            closeTo: ownerAddress
-        }
-    }
+        stateInit: { code: jettonWalletCode, data: emptyWalletStorage.toCell() },
+        toShard: { fixedPrefixLength: SHARD_DEPTH, closeTo: ownerAddress },
+    };
 }
 
-fun buildAddressOfJettonWallet(ownerAddress: address, minterAddress: address, jettonWalletCode: cell) {
+fun buildAddressOfJettonWallet(
+    ownerAddress: address,
+    minterAddress: address,
+    jettonWalletCode: cell,
+) {
     val jwDeployed = calcDeployedJettonWallet(ownerAddress, minterAddress, jettonWalletCode);
-    return jwDeployed.buildAddress()
+    return jwDeployed.buildAddress();
 }
 
-fun address.isAddressOfJettonWallet(self, ownerAddress: address, minterAddress: address, jettonWalletCode: cell) {
+fun address.isAddressOfJettonWallet(
+    self,
+    ownerAddress: address,
+    minterAddress: address,
+    jettonWalletCode: cell,
+) {
     val jwDeployed = calcDeployedJettonWallet(ownerAddress, minterAddress, jettonWalletCode);
-    return jwDeployed.addressMatches(self)
+    return jwDeployed.addressMatches(self);
 }

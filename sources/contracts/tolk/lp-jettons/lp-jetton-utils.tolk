@@ -49,7 +49,6 @@ fun createSuccessfulForwardPayload(lowerSuccessPayload: cell?, higherSuccessPayl
         eitherBit: false,
         lowerSuccessPayload,
         higherSuccessPayload,
-    }
-        .toCell()
+    }.toCell()
         .beginParse();
 }
