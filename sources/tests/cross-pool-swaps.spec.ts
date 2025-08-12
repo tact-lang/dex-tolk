@@ -14,11 +14,10 @@ import {
 } from "../utils/environment-tolk"
 
 import {beginCell, toNano} from "@ton/core"
-import {loadPayoutFromPool} from "../output/DEX_AmmPool"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {findTransactionRequired, flattenTransaction, randomAddress} from "@ton/test-utils"
-import {SwapStep} from "../tolk-wrappers/common"
+import {loadPayoutFromPool, SwapStep} from "../tolk-wrappers/common"
 import {DexOpcodes, DexErrors} from "../tolk-wrappers/DexConstants"
 
 describe("Cross-pool Swaps", () => {

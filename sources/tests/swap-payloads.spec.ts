@@ -5,12 +5,12 @@ import {Blockchain} from "@ton/sandbox"
 import {createJettonAmmPool} from "../utils/environment-tolk"
 import {beginCell, toNano} from "@ton/core"
 // TODO: change this imports
-import {loadPayoutFromPool, loadSendViaJettonTransfer} from "../output/DEX_AmmPool"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
-import {JettonVault} from "../output/DEX_JettonVault"
 import {findTransactionRequired, flattenTransaction} from "@ton/test-utils"
 import {DexOpcodes, DexErrors} from "../tolk-wrappers/DexConstants"
+import {loadPayoutFromPool, loadSendViaJettonTransfer} from "../tolk-wrappers/common"
+import {Op} from "../tolk-wrappers/lp-jettons/JettonConstants"
 
 describe("Payloads", () => {
     test("Successful swap should return success payload", async () => {
@@ -74,7 +74,7 @@ describe("Payloads", () => {
         const tx = findTransactionRequired(swapResult.transactions, {
             from: vaultB.vault.address,
             // TODO: to: vaultB.jettonWallet
-            op: JettonVault.opcodes.SendViaJettonTransfer,
+            op: Op.transfer,
             success: true,
         })
 

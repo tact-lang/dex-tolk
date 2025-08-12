@@ -1,4 +1,6 @@
-import {Address, beginCell, Builder, Cell} from "@ton/core"
+import {Address, beginCell, Builder, Cell, Slice} from "@ton/core"
+import {DexOpcodes} from "./DexConstants"
+import {Op} from "./lp-jettons/JettonConstants"
 
 export const storeLiquidityDepositDestination = (
     LPContract: Address,
@@ -145,4 +147,73 @@ Builder.prototype.storeMaybeInternalAddress = function (address: Address | null)
     }
 
     return this.storeBit(1).storeAddress(address)
+}
+
+export function loadPayoutFromPool(sl: Slice) {
+    if (sl.loadUint(32) !== DexOpcodes.PayoutFromPool) {
+        throw Error("Invalid prefix")
+    }
+
+    const otherVault = sl.loadAddress()
+    const amount = sl.loadCoins()
+    const receiver = sl.loadAddress()
+    const payloadToForward = sl.loadMaybeRef()
+
+    return {
+        $$type: "PayoutFromPool" as const,
+        otherVault: otherVault,
+        amount: amount,
+        receiver: receiver,
+        payloadToForward: payloadToForward,
+    }
+}
+
+export function loadMintViaJettonTransferInternal(sl: Slice) {
+    if (sl.loadUint(32) !== Op.internal_transfer) {
+        throw Error("Invalid prefix")
+    }
+
+    const queryId = sl.loadUintBig(64)
+    const amount = sl.loadCoins()
+    const sender = sl.loadAddress()
+    const sendAllTonsInNotifyFlag = sl.loadBit()
+    const responseDestination = sl.loadMaybeAddress()
+    const forwardTonAmount = sl.loadCoins()
+    const forwardPayload = sl
+
+    return {
+        $$type: "MintViaJettonTransferInternal" as const,
+        queryId: queryId,
+        amount: amount,
+        sender: sender,
+        sendAllTonsInNotifyFlag: sendAllTonsInNotifyFlag,
+        responseDestination: responseDestination,
+        forwardTonAmount: forwardTonAmount,
+        forwardPayload: forwardPayload,
+    }
+}
+
+export function loadSendViaJettonTransfer(sl: Slice) {
+    if (sl.loadUint(32) !== Op.transfer) {
+        throw Error("Invalid prefix")
+    }
+
+    const queryId = sl.loadUintBig(64)
+    const amount = sl.loadCoins()
+    const destination = sl.loadAddress()
+    const responseDestination = sl.loadMaybeAddress()
+    const customPayload = sl.loadBit() ? sl.loadRef() : null
+    const forwardTonAmount = sl.loadCoins()
+    const forwardPayload = sl
+
+    return {
+        $$type: "SendViaJettonTransfer" as const,
+        queryId: queryId,
+        amount: amount,
+        destination: destination,
+        responseDestination: responseDestination,
+        customPayload: customPayload,
+        forwardTonAmount: forwardTonAmount,
+        forwardPayload: forwardPayload,
+    }
 }
