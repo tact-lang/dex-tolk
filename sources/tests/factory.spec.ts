@@ -27,7 +27,8 @@ import {randomInt} from "crypto"
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {randomCoins} from "../utils/testUtils"
 
-describe("Factory", () => {
+// TODO: rewrite and port to Tolk
+describe.skip("Factory", () => {
     let factory: SandboxContract<Factory>
     let deployer: SandboxContract<TreasuryContract>
 

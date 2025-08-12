@@ -26,6 +26,9 @@ export default [
             "dist/*",
             "sources/output/*",
             "tact-upstream/*",
+            "**/proofs.spec.ts",
+            "**/factory.spec.ts",
+            "**/deploy.ts",
         ],
     },
 

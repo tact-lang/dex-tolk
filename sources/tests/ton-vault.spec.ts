@@ -6,11 +6,11 @@ import {createJetton, createTonVault} from "../utils/environment-tolk"
 import {beginCell, toNano} from "@ton/core"
 import {findTransactionRequired, flattenTransaction, randomAddress} from "@ton/test-utils"
 import {randomInt} from "node:crypto"
-import {loadPayoutFromTonVault} from "../output/DEX_TonVault"
 import {sortAddresses} from "../utils/deployUtils"
 import {Op} from "../tolk-wrappers/lp-jettons/JettonConstants"
 import {DexErrors, DexOpcodes} from "../tolk-wrappers/DexConstants"
 import {createAmmPoolContract, createTonVaultContract} from "../tolk-toolchain/generator"
+import {loadPayoutFromTonVault} from "../tolk-wrappers/common"
 
 describe("TON Vault", () => {
     test("Jettons are returned if sent to TON Vault", async () => {

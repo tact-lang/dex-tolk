@@ -6,3 +6,4 @@ sources/output
 tact-upstream/
 fift-output
 .env
+dist

@@ -4,12 +4,12 @@
 import {beginCell, toNano} from "@ton/core"
 import {Blockchain} from "@ton/sandbox"
 import {findTransactionRequired, flattenTransaction} from "@ton/test-utils"
-import {loadMintViaJettonTransferInternal, loadPayoutFromPool} from "../output/DEX_AmmPool"
 import {createJettonAmmPool} from "../utils/environment-tolk"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {Op} from "../tolk-wrappers/lp-jettons/JettonConstants"
 import {DexOpcodes} from "../tolk-wrappers/DexConstants"
+import {loadMintViaJettonTransferInternal, loadPayoutFromPool} from "../tolk-wrappers/common"
 
 describe("Liquidity payloads", () => {
     test("should send both successful payloads via LP minting, and send no excesses on first deposit", async () => {

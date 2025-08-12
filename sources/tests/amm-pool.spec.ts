@@ -4,8 +4,6 @@
 import {Blockchain, GetMethodError, SandboxContract} from "@ton/sandbox"
 import {createJettonAmmPool, createTonJettonAmmPool} from "../utils/environment-tolk"
 import {Address, beginCell, toNano} from "@ton/core"
-// TODO: remove this imports
-import {AmmPool, loadPayoutFromPool} from "../output/DEX_AmmPool"
 // eslint-disable-next-line
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {findTransactionRequired, flattenTransaction, randomAddress} from "@ton/test-utils"
@@ -15,6 +13,7 @@ import {AmmPool as AmmPoolTolk} from "../tolk-wrappers/AmmPool"
 import {LpJettonWallet} from "../tolk-wrappers/lp-jettons/LpJettonWallet"
 import {DexOpcodes, DexErrors} from "../tolk-wrappers/DexConstants"
 import {Op} from "../tolk-wrappers/sharded-jettons/JettonConstants"
+import {loadPayoutFromPool} from "../tolk-wrappers/common"
 
 describe("Amm pool", () => {
     test("should swap exact amount of jetton to jetton", async () => {
@@ -395,20 +394,14 @@ describe("Amm pool", () => {
             const blockchain = await Blockchain.create()
             const deployer = await blockchain.treasury(randomAddress().toString()) // Just a random treasury
             const ammPool = blockchain.openContract(
-                await AmmPool.fromInit(randomAddress(), randomAddress(), 0n, 0n, 0n, null),
+                await createAmmPoolContract(randomAddress(), randomAddress()),
             )
             const badAddr = randomAddress(-1)
-            let discoveryResult = await ammPool.send(
+            const discoveryResult = await ammPool.sendDiscovery(
                 deployer.getSender(),
-                {
-                    value: toNano(0.01),
-                },
-                {
-                    $$type: "ProvideWalletAddress",
-                    queryId: 0n,
-                    ownerAddress: badAddr,
-                    includeAddress: false,
-                },
+                badAddr,
+                false,
+                toNano(1),
             )
 
             expect((await blockchain.getContract(ammPool.address)).balance).toBeLessThanOrEqual(0n)
@@ -426,20 +419,14 @@ describe("Amm pool", () => {
 
             // Include address should still be available
 
-            discoveryResult = await ammPool.send(
+            const secondDiscoveryResult = await ammPool.sendDiscovery(
                 deployer.getSender(),
-                {
-                    value: toNano(0.01),
-                },
-                {
-                    $$type: "ProvideWalletAddress",
-                    queryId: 0n,
-                    ownerAddress: badAddr,
-                    includeAddress: true,
-                },
+                badAddr,
+                true,
+                toNano(1),
             )
 
-            expect(discoveryResult.transactions).toHaveTransaction({
+            expect(secondDiscoveryResult.transactions).toHaveTransaction({
                 from: ammPool.address,
                 to: deployer.address,
                 body: beginCell()

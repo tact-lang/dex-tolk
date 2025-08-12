@@ -128,7 +128,7 @@ const swapResult = await userJettonWallet.sendTransfer(
 )
 ```
 
-You can check more details on swap serialization inside [test helpers](../sources/utils/testUtils.ts).
+You can check more details on swap serialization - TODO: add new link
 
 ### Ton vault swap message
 

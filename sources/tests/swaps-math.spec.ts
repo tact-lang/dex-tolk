@@ -5,6 +5,7 @@ import {toNano} from "@ton/core"
 import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {calculateAmountIn, calculateAmountOut, calculateSwapResult} from "../utils/liquidityMath"
 import {DexOpcodes, LiquidityProvidersPoolFee} from "../tolk-wrappers/DexConstants"
+import "@ton/test-utils"
 
 const expectEqualTvmToJs = (expected: bigint, got: bigint) => {
     expect(expected).toBeGreaterThanOrEqual(got - 1n)

@@ -7,6 +7,7 @@ export const DexOpcodes = {
     SwapRequestAction: 0xbfa68001,
     SwapIn: 0xac2f5a38,
     LiquidityDeposit: 0x642b7d07,
+    PayoutFromTonVaultWithPayload: 0x2d8b123a,
 }
 
 export const DexErrors = {
@@ -18,7 +19,7 @@ export const DexErrors = {
     // liquidity deposit errors
     INCORRECT_LIQUIDITY_DEPOSIT_AMOUNT: 27528,
     MSG_NOT_FROM_VAULTS: 23922,
-    VAULTS_MUST_BE_DIFFFERENT: 21256,
+    VAULTS_MUST_BE_DIFFERENT: 21256,
     VAULTS_MUST_BE_SORTED: 24244,
 
     // amm pool errors

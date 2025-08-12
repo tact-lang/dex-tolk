@@ -349,7 +349,7 @@ yarn test
 
 ## Contract Configuration
 
-If you need to modify the contract configuration, update the [`tact.config.json`](./tact.config.json) file. For a description of `tact.config.json`, see the [Configuration page in the Tact documentation](https://docs.tact-lang.org/book/config).
+TODO: describe Tolk pipeline
 
 ## License
 
