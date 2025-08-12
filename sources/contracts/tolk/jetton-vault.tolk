@@ -58,7 +58,7 @@ fun onInternalMessage(in: InMessage) {
                 msg.refundWithError(in.senderAddress, SENDER_IS_NOT_THE_VAULT_JETTON_WALLET);
             }
 
-            val isEnoughGasForaction = handleAction(
+            val isEnoughGasForAction = handleAction(
                 msg.jettonVaultPayload.action,
                 msg.jettonAmount,
                 msg.transferInitiator,
@@ -66,7 +66,7 @@ fun onInternalMessage(in: InMessage) {
                 in.senderAddress
             );
 
-            if (!isEnoughGasForaction) {
+            if (!isEnoughGasForAction) {
                 msg.refundWithError(in.senderAddress, GAS_LOW_FOR_ACTION);
             }
         }
@@ -86,15 +86,15 @@ fun onInternalMessage(in: InMessage) {
             ) throw SENDER_SHOULD_BE_AMM_POOL;
 
             // TODO: handle jetton fee
-            var remaininValue = in.valueCoins - 1;
-            remaininValue = min(remaininValue, 0);
+            var remainingValue = in.valueCoins - 1;
+            remainingValue = min(remainingValue, 0);
 
             val payoutFromPoolMsg = createMessage({
                 body: AskToTransfer {
                     queryId: 0,
                     jettonAmount: msg.amount,
                     sendExcessesTo: msg.receiver,
-                    forwardTonAmount: remaininValue,
+                    forwardTonAmount: remainingValue,
                     transferRecipient: msg.receiver,
                     // ugly, TVM12 builder->slice waiting room
                     forwardPayload: beginCell().storeMaybeRef(msg.payloadToForward).endCell()

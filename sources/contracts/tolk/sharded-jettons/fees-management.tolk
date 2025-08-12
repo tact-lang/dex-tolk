@@ -62,7 +62,7 @@ fun checkAmountIsEnoughToTransfer(msgValue: int, forwardTonAmount: int, fwdFee: 
         // but last one is optional (it is ok if it fails)
         fwdCount *
         fwdFee +
-        forwardInitStateOverhead() + // additional fwd fees related to initstate in iternal_transfer
+        forwardInitStateOverhead() + // additional fwd fees related to init state
         calculateGasFee(MY_WORKCHAIN, sendTransferGasConsumption) +
         calculateGasFee(MY_WORKCHAIN, receiveTransferGasConsumption) +
         calculateJettonWalletMinStorageFee()

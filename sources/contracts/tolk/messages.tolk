@@ -92,7 +92,7 @@ struct LpAdditionalParams {
 // to the extra ref so they won't be loaded with lazy storage;
 //
 // we move this fields to the separate ref
-// since all storage doesnt fit into single cell
+// since all storage doesn't fit into single cell
 struct LiquidityDepositExtraFields {
     lpTokensReceiver: address
     // on-chain salt for simultaneous lp provisionings
@@ -157,13 +157,13 @@ struct (0x3) StateToTheBlockProof {
 
 type JettonVaultProof = NoProof | MinterDiscoveryProof | OnchainGetterProof | StateToTheBlockProof
 
-struct (0b0) JettonVaultNotificationPaylaod {
+struct (0b0) JettonVaultNotificationPayload {
     action: Cell<JettonVaultAction>
     proof: JettonVaultProof
 }
 
 // struct (0b0) JettonVaultPayloadInline {
-//     data: JettonVaultNotificationPaylaod
+//     data: JettonVaultNotificationPayload
 // }
 // struct (0b1) JettonVaultPayloadRef {
 //     ref: cell
@@ -177,7 +177,7 @@ struct (0x7362d09c) JettonTransferNotificationWithVaultAction {
     jettonAmount: coins
     transferInitiator: address
     // we want payload to be stored inline
-    jettonVaultPayload: JettonVaultNotificationPaylaod
+    jettonVaultPayload: JettonVaultNotificationPayload
 }
 
 fun createSliceWithOneZeroBit(): slice

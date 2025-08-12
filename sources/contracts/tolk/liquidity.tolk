@@ -200,7 +200,7 @@ fun calcWithdrawalAmounts(burnedLpJTokensAmount: coins, parameters: LiquidityWit
     return (lowerAmountOut, higherAmountOut);
 }
 
-// a lot of ulgy parameters, but it will be nicely inlined
+// a lot of ugly parameters, but it will be nicely inlined
 // so doesn't matter
 @inline
 fun failLiquidityProvisionWithError(

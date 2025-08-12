@@ -82,7 +82,7 @@ fun onInternalMessage(in: InMessage) {
             storage.save();
 
             // Mint LP tokens, amm pool acts as the jetton minter for lp jettons
-            val successForwarsPayload = createSuccessfulForwardPayload(
+            val successForwardPayload = createSuccessfulForwardPayload(
                 lowerAdditionalParams.payloadOnSuccess,
                 higherAdditionalParams.payloadOnSuccess
             );
@@ -95,7 +95,7 @@ fun onInternalMessage(in: InMessage) {
                     sendExcessesTo: extra.lpTokensReceiver,
                     sendAllTonsInNotifyFlag: true,
                     forwardTonAmount: 0,
-                    forwardPayload: successForwarsPayload,
+                    forwardPayload: successForwardPayload,
                 },
                 // actually this is the only message in whole T-Dex
                 // that is send as bounceable, since we handle it
@@ -265,7 +265,7 @@ fun onInternalMessage(in: InMessage) {
     }
 }
 
-// get methdos
+// get methods
 type VaultsWithReserves = SortedAddressesAndAmounts
 
 // pool get methods

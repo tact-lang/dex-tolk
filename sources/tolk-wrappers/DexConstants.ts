@@ -18,7 +18,7 @@ export const DexErrors = {
     // liquidity deposit errors
     INCORRECT_LIQUIDITY_DEPOSIT_AMOUNT: 27528,
     MSG_NOT_FROM_VAULTS: 23922,
-    VAULTS_MUST_BE_DIFFFERENT: 21256,
+    VAULTS_MUST_BE_DIFFERENT: 21256,
     VAULTS_MUST_BE_SORTED: 24244,
 
     // amm pool errors

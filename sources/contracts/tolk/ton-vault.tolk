@@ -27,7 +27,6 @@ fun onInternalMessage(in: InMessage) {
     match (msg) {
         PayoutFromPool => {
             val storage = lazy TonVaultStorage.load();
-            // TODO: sort in overrided .toCell?
             val sortedAddresses = sortAddresses(contract.getAddress(), msg.otherVault);
 
             assert (
@@ -84,7 +83,7 @@ fun onInternalMessage(in: InMessage) {
             swapInMsg.send(SEND_MODE_BOUNCE_ON_ACTION_FAIL | SEND_MODE_CARRY_ALL_BALANCE);
         }
         AddLiquidityPartTon => {
-            // TODO: fees (andrey)
+            // TODO: fees
             val protocolGasFee = 1;
             assert (in.valueCoins - msg.amountIn > protocolGasFee) throw NOT_ENOUGH_VALUE_FOR_FEES;
 

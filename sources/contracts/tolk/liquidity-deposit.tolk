@@ -34,7 +34,7 @@ fun onInternalMessage(in: InMessage) {
                 throw MSG_NOT_FROM_VAULTS;
             }
 
-            assert (storage.lowerVault != storage.higherVault) throw VAULTS_MUST_BE_DIFFFERENT;
+            assert (storage.lowerVault != storage.higherVault) throw VAULTS_MUST_BE_DIFFERENT;
             // if both sides are filled, we can send deposit msg
             if (storage.isLowerSideFilled && storage.isHigherSideFilled) {
                 // check that sort is correct, could be security issue

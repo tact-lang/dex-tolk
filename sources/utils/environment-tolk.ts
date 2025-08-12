@@ -520,7 +520,7 @@ const createLiquidityDepositSetup = (
         const ammPool = blockchain.openContract(await createAmmPoolContract(vaultLeft, vaultRight))
 
         const getLpWallet = async () => {
-            // toncore doesn't support sharding so we just call
+            // ton-core doesn't support sharding so we just call
             // get method; function instead of const because before pool deploy its not inited
             return blockchain.openContract(
                 LpJettonWallet.createFromAddress(await ammPool.getWalletAddress(depositor)),
