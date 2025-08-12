@@ -120,23 +120,23 @@ fun onInternalMessage(in: InMessage) {
             val swap = lazy msg.swap.load();
 
             if (storage.lowerSideReserve == 0 || storage.higherSideReserve == 0) {
-                returnFunds(
+                returnFundsWithError(
                     incomingVault,
                     msg.receiver,
                     msg.amount,
-                    swap.parameters.payloadOnFailure
+                    swap.parameters.payloadOnFailure,
+                    NO_LIQUIDITY_IN_POOL
                 );
-                throw NO_LIQUIDITY_IN_POOL;
             }
 
             if (swap.parameters.timeout.isTimeoutExceeded()) {
-                returnFunds(
+                returnFundsWithError(
                     incomingVault,
                     msg.receiver,
                     msg.amount,
-                    swap.parameters.payloadOnFailure
+                    swap.parameters.payloadOnFailure,
+                    SWAP_TIMEOUT_EXCEEDED
                 );
-                throw SWAP_TIMEOUT_EXCEEDED;
             }
 
             val (updatedInReserve, updatedOutReserve, isSwapFromHigherVault) = handleSwap(

@@ -41,17 +41,16 @@ struct SwapContext {
 @inline
 @pure
 fun AmmPoolStorage.getSwapContext(self, incomingVault: address): SwapContext {
-    // TODO: remove return
-    if (incomingVault == self.lowerVault) {
-        return {
-            inVault: self.lowerVault,
-            outVault: self.higherVault,
-            inReserve: self.lowerSideReserve,
-            outReserve: self.higherSideReserve,
-            isSwapFromHigherVault: false,
-        };
-    } else {
-        return {
+    var result = SwapContext {
+        inVault: self.lowerVault,
+        outVault: self.higherVault,
+        inReserve: self.lowerSideReserve,
+        outReserve: self.higherSideReserve,
+        isSwapFromHigherVault: false,
+    };
+
+    if (incomingVault != self.lowerVault) {
+        result = {
             inVault: self.higherVault,
             outVault: self.lowerVault,
             inReserve: self.higherSideReserve,
@@ -59,9 +58,18 @@ fun AmmPoolStorage.getSwapContext(self, incomingVault: address): SwapContext {
             isSwapFromHigherVault: true,
         };
     }
+
+    return result;
 }
 
-fun returnFunds(incomingVault: address, receiver: address, amount: coins, payloadOnFailure: cell?) {
+@inline
+fun returnFundsWithError(
+    incomingVault: address,
+    receiver: address,
+    amount: coins,
+    payloadOnFailure: cell?,
+    error: int,
+) {
     val storage = lazy AmmPoolStorage.load();
     val ctx = storage.getSwapContext(incomingVault);
 
@@ -80,6 +88,8 @@ fun returnFunds(incomingVault: address, receiver: address, amount: coins, payloa
     refundMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
     // commit since we want to save refund action before throw
     commitContractDataAndActions();
+
+    throw error;
 }
 
 // function that handles swap math and returns updated reserves;
@@ -87,6 +97,7 @@ fun returnFunds(incomingVault: address, receiver: address, amount: coins, payloa
 //     - swap request is from one the vaults
 //     - pool has not null reserves
 //     - swap timeout has not exceeded
+@inline_ref
 fun handleSwap(
     swap: Swap,
     inAmount: coins,
@@ -121,8 +132,13 @@ fun handleSwap(
             val amountOut = ctx.outReserve - updatedOutReserve;
 
             if (amountOut < swap.swapInfo.minAmountOut) {
-                returnFunds(incomingVault, receiver, inAmount, swap.parameters.payloadOnFailure);
-                throw AMOUNT_OUT_IS_LESS_THAN_LIMIT;
+                returnFundsWithError(
+                    incomingVault,
+                    receiver,
+                    inAmount,
+                    swap.parameters.payloadOnFailure,
+                    AMOUNT_OUT_IS_LESS_THAN_LIMIT
+                );
             }
 
             match (swap.swapInfo.nextStep) {
@@ -175,8 +191,13 @@ fun handleSwap(
             updatedOutReserve = ctx.outReserve - swap.swapInfo.exactOutAmount;
 
             if (updatedOutReserve <= 0) {
-                returnFunds(incomingVault, receiver, inAmount, swap.parameters.payloadOnFailure);
-                throw INSUFFICIENT_RESERVES_FOR_EXACT_OUT_VALUE;
+                returnFundsWithError(
+                    incomingVault,
+                    receiver,
+                    inAmount,
+                    swap.parameters.payloadOnFailure,
+                    INSUFFICIENT_RESERVES_FOR_EXACT_OUT_VALUE
+                );
             }
 
             // 2. calculate requiredAmountInWithPoolFeeApplied so that we
@@ -188,8 +209,13 @@ fun handleSwap(
             );
 
             if (requiredAmountInWithPoolFeeApplied > inAmount) {
-                returnFunds(incomingVault, receiver, inAmount, swap.parameters.payloadOnFailure);
-                throw INSUFFICIENT_IN_AMOUNT_FOR_EXACT_OUT_VALUE;
+                returnFundsWithError(
+                    incomingVault,
+                    receiver,
+                    inAmount,
+                    swap.parameters.payloadOnFailure,
+                    INSUFFICIENT_IN_AMOUNT_FOR_EXACT_OUT_VALUE
+                );
             }
 
             // 3. if we received more inAmount than we need for swap,

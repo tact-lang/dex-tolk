@@ -68,7 +68,7 @@ fun handleReservesUpdate(
         );
 
         if (balancedHigherAmount < higherAdditionalParams.minAmountToDeposit) {
-            failLiquidityProvision(
+            failLiquidityProvisionWithError(
                 storage.lowerVault,
                 storage.higherVault,
                 lowerAmount,
@@ -76,9 +76,9 @@ fun handleReservesUpdate(
                 lowerAdditionalParams.payloadOnFailure,
                 higherAdditionalParams.payloadOnFailure,
                 lpTokensReceiver,
-                inValue
+                inValue,
+                LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED
             );
-            throw LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED;
         }
 
         // refund higher lp excesses if we received more than we can accept
@@ -124,7 +124,7 @@ fun handleReservesUpdate(
     );
 
     if (balancedLowerAmount < lowerAdditionalParams.minAmountToDeposit) {
-        failLiquidityProvision(
+        failLiquidityProvisionWithError(
             storage.lowerVault,
             storage.higherVault,
             lowerAmount,
@@ -132,9 +132,9 @@ fun handleReservesUpdate(
             lowerAdditionalParams.payloadOnFailure,
             higherAdditionalParams.payloadOnFailure,
             lpTokensReceiver,
-            inValue
+            inValue,
+            LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED
         );
-        throw LIQUIDITY_PROVISIONING_SLIPPAGE_FAILED;
     }
 
     // refund lower lp excesses if we received more than we can accept
@@ -202,7 +202,8 @@ fun calcWithdrawalAmounts(burnedLpJTokensAmount: coins, parameters: LiquidityWit
 
 // a lot of ulgy parameters, but it will be nicely inlined
 // so doesn't matter
-fun failLiquidityProvision(
+@inline
+fun failLiquidityProvisionWithError(
     lowerVault: address,
     higherVault: address,
     lowerAmount: coins,
@@ -211,6 +212,7 @@ fun failLiquidityProvision(
     higherPayloadOnFailure: cell?,
     lpTokensReceiver: address,
     inValue: coins,
+    error: int,
 ) {
     val refundLpLower = createMessage({
         body: PayoutFromPool {
@@ -239,4 +241,6 @@ fun failLiquidityProvision(
     refundLpHigher.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_IGNORE_ERRORS);
 
     commitContractDataAndActions();
+
+    throw error;
 }
