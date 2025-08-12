@@ -2,7 +2,6 @@
     "private": true,
     "scripts": {
         "build:tolk": "ts-node sources/tolk-toolchain/compileAll.ts",
-        "lint": "tact-fmt --check ./sources && yarn misti ./tact.config.json",
         "test": "jest sources/tests",
         "deploy": "ts-node ./sources/scripts/deploy.ts",
         "read": "ts-node ./sources/contract.read.ts",

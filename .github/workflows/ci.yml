@@ -41,6 +41,9 @@ jobs:
       - name: Check for duplicates in yarn.lock
         run: yarn deduplicate
 
+      - name: Tolk build
+        run: yarn build:tolk
+
       - name: Check formatting
         run: yarn fmt:check
 
