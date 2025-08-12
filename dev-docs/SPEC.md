@@ -1,25 +1,5 @@
 # DEX Development Specification
 
-## Error Messages Format
-
-### Prefixing Requirements with Contract Name
-
-All `require` statements must include the contract name as a prefix in error messages. This helps with debugging and quickly identifying which contract threw an error.
-
-**❌ Don't:**
-
-```tact
-require(false, "Liquidity provision failed due to timeout");
-```
-
-**✅ Do:**
-
-```tact
-require(false, "Pool: Liquidity provision failed due to timeout");
-```
-
-This practice significantly simplifies debugging, as developers can immediately identify the source contract without needing to switch between contract files and test files repeatedly.
-
 ## Message Handling
 
 ### Internal Protocol Messages
@@ -46,3 +26,12 @@ This approach results in cleaner, more efficient code with simplified message ha
 ## More about StorageFee Handling
 
 - There are no any fees handling in `factory` contract, as adding this will increase gas consumption but won't provide any benefits. (Factory contract can't break any invariants)
+
+## Tolk patterns
+
+TODO: add sections about implemented Tolk patterns:
+
+- Storage handling
+- Address auth handling with contractCode
+- AllowedMessages
+- actionWithError
