@@ -63,5 +63,6 @@
         "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */,
         "resolveJsonModule": true
     },
-    "include": ["sources/**/*", "jest.config.ts", "jest.setup.ts", "jest.teardown.ts"]
+    "include": ["sources/**/*", "jest.config.ts"],
+    "exclude": ["**/proofs.spec.ts", "**/factory.spec.ts", "**/deploy.ts"]
 }

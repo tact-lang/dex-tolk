@@ -7,6 +7,7 @@ export const DexOpcodes = {
     SwapRequestAction: 0xbfa68001,
     SwapIn: 0xac2f5a38,
     LiquidityDeposit: 0x642b7d07,
+    PayoutFromTonVaultWithPayload: 0x2d8b123a,
 }
 
 export const DexErrors = {

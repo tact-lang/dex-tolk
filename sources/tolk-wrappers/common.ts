@@ -217,3 +217,16 @@ export function loadSendViaJettonTransfer(sl: Slice) {
         forwardPayload: forwardPayload,
     }
 }
+
+export function loadPayoutFromTonVault(sl: Slice) {
+    if (sl.loadUint(32) !== DexOpcodes.PayoutFromTonVaultWithPayload) {
+        throw Error("Invalid prefix")
+    }
+
+    const body = sl.loadMaybeRef()
+
+    return {
+        $$type: "PayoutFromTonVault" as const,
+        body,
+    }
+}
