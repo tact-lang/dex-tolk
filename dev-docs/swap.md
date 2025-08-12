@@ -1,5 +1,7 @@
 # Swaps
 
+TODO: adapt to Tolk
+
 This section of the dev-docs focuses on how to perform on-chain asset swaps on T-Dex. A swap essentially involves sending the asset you want to swap to its corresponding vault and attaching a message body with the swap request details. The vault will then create a swap-in message and send it to the AMM pool, which will handle the math and either return the funds if they do not pass the slippage check or send a payout message to the other vault (sometimes the pool will perform both actions together).
 
 ## Prerequisites
