@@ -12,7 +12,11 @@
         "fmt": "yarn prettier -l -w .",
         "fmt:check": "yarn prettier --check .",
         "fmt:tolk": "tolkfmt --write ./sources",
-        "deduplicate": "yarn yarn-deduplicate --list --fail"
+        "deduplicate": "yarn yarn-deduplicate --list --fail",
+        "bench": "PRINT_TABLE=true ts-node ./sources/tolk-toolchain/benchmark.ts",
+        "bench:ci": "PRINT_TABLE=false ts-node ./sources/tolk-toolchain/benchmark.ts",
+        "bench:add": "UPDATE=false ts-node ./sources/tolk-toolchain/update.ts",
+        "bench:update": "UPDATE=true ts-node ./sources/tolk-toolchain/update.ts"
     },
     "dependencies": {
         "@aws-crypto/sha256-js": "^5.2.0",
@@ -30,6 +34,7 @@
         "@types/node": "^18.11.14",
         "@types/qs": "^6.9.7",
         "base64url": "^3.0.1",
+        "cli-table3": "^0.6.5",
         "dotenv": "^16.4.7",
         "enquirer": "^2.3.6",
         "jest": "^29.3.1",

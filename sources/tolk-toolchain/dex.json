@@ -1,0 +1,40 @@
+{
+    "results": [
+        {
+            "label": "Initial",
+            "gas": {
+                "liquidity": "40374",
+                "ton-swap": "19069",
+                "jetton-swap": "14925"
+            },
+            "size": {
+                "ton-vault-bits": "35843",
+                "ton-vault-cells": "78",
+                "jetton-vault-bits": "40812",
+                "jetton-vault-cells": "90",
+                "pool-bits": "30731",
+                "pool-cells": "66"
+            },
+            "summary": "74368",
+            "pr": "https://github.com/tact-lang/jetton/pull/77"
+        },
+        {
+            "label": "With inlined getHops",
+            "pr": "123",
+            "gas": {
+                "liquidity": "40174",
+                "ton-swap": "18445",
+                "jetton-swap": "14562"
+            },
+            "size": {
+                "ton-vault-bits": "35688",
+                "ton-vault-cells": "75",
+                "jetton-vault-bits": "40720",
+                "jetton-vault-cells": "89",
+                "pool-bits": "30731",
+                "pool-cells": "66"
+            },
+            "summary": "73181"
+        }
+    ]
+}
