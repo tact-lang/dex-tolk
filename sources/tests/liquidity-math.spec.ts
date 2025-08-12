@@ -9,6 +9,7 @@ import {SendDumpToDevWallet} from "@tondevwallet/traces"
 import {calculateLiquidityProvisioning, calculateLiquidityWithdraw} from "../utils/liquidityMath"
 import {Op} from "../tolk-wrappers/lp-jettons/JettonConstants"
 import {DexErrors} from "../tolk-wrappers/DexConstants"
+import "@ton/test-utils"
 
 describe.each([
     {

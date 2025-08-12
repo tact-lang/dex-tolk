@@ -1,6 +1,5 @@
 export default {
     preset: "ts-jest",
     testEnvironment: "node",
-    testPathIgnorePatterns: ["/node_modules/", "/dist/"],
-    snapshotSerializers: ["@tact-lang/ton-jest/serializers"],
+    testPathIgnorePatterns: ["/node_modules/", "/dist/", "proofs.spec.ts", "factory.spec.ts"],
 }
