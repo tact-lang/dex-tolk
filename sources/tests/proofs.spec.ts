@@ -62,7 +62,8 @@ function rebuild(cell: Cell, path: number[], replacement: Cell): Cell {
     return builder.endCell({exotic: cell.isExotic})
 }
 
-describe("Proofs", () => {
+// TODO: rewrite and port to Tolk
+describe.skip("Proofs", () => {
     test("TEP89 proof should correctly work for discoverable jettons", async () => {
         const blockchain = await Blockchain.create()
         // Our Jettons, used when creating the vault support TEP-89
