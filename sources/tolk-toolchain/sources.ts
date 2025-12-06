@@ -8,6 +8,7 @@ export const DEX_SOURCES = {
     "jetton-vault": "sources/contracts/jetton-vault.tolk",
     "sharded-jetton-minter": "sources/contracts/sharded-jettons/jetton-minter-contract.tolk",
     "sharded-jetton-wallet": "sources/contracts/sharded-jettons/jetton-wallet-contract.tolk",
+    "tep89-proxy": "sources/contracts/tep89-proxy",
 }
 
 export type ContractName = keyof typeof DEX_SOURCES

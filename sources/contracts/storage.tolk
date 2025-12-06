@@ -144,3 +144,15 @@ fun address.isAddressOfLiquidityDeposit(
     );
     return liquidityDeposit.addressMatches(self);
 }
+
+struct ProxyStorage {
+    minter: address
+    discoveryRequester: address
+    expectedJettonWallet: address
+    action: Cell<JettonTransferNotificationWithVaultAction>
+    discoveryId: uint64
+}
+
+fun ProxyStorage.load() {
+    return ProxyStorage.fromCell(contract.getData());
+}

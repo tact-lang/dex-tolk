@@ -1,4 +1,5 @@
 import "errors"
+import "storage"
 import "messages"
 
 fun address.isFromStateInitInBasechain(self, stateInit: StateInit) {
@@ -8,12 +9,42 @@ fun address.isFromStateInitInBasechain(self, stateInit: StateInit) {
     }.addressMatches(self);
 }
 
-fun checkProof(proof: JettonVaultProof, minter: address, msgSender: address) {
+fun exit(): void
+    asm """ 
+<{ }> PUSHCONT 
+CALLCC
+"""
+
+fun checkProof(
+    proof: JettonVaultProof,
+    minter: address,
+    msgSender: address,
+    msgCell: Cell<JettonTransferNotificationWithVaultAction>,
+    tep89ProxyCode: cell,
+) {
     match (proof) {
         NoProof => {
             return;
         }
-        MinterDiscoveryProof => {}
+        MinterDiscoveryProof => {
+            val proxyCode = tep89ProxyCode;
+            val proxyData = ProxyStorage {
+                discoveryId: blockchain.now(),
+                minter,
+                expectedJettonWallet: msgSender,
+                discoveryRequester: contract.getAddress(),
+                action: msgCell,
+            }.toCell();
+
+            val proxyMsg = createMessage({
+                dest: { stateInit: { code: proxyCode, data: proxyData } },
+                bounce: false,
+                value: 0,
+            });
+
+            proxyMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+            exit();
+        }
         OnchainGetterProof => {
             val vaultJettonWallet = calcJettonWalletAddressWithOnchainGetter(
                 contract.getAddress(),
