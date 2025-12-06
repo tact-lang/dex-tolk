@@ -1,32 +1,16 @@
 import "storage"
+import "errors"
+import "messages"
 
-struct (0x7a1267fd) TEP89DiscoveryResult {
-    discoveryId: uint64
-    expectedJettonWallet: address
-    actualJettonWallet: address?
-    action: cell
-}
-
-struct (0xd1735400) TakeWalletAddress {
-    queryId: uint64
-    jettonWalletAddress: address?
-    ownerAddress: Cell<address>?
-}
-
-struct (0x2c76b973) ProvideWalletAddress {
-    queryId: uint64
-    ownerAddress: address
-    includeAddress: bool
-}
-
-type AllowedMessagesForProxy = TakeWalletAddress
-
+// Proxy for TEP-89 wallet discovery process
+// Handles interaction with Jetton Master and result delivery
 fun onInternalMessage(in: InMessage) {
     var msg = lazy AllowedMessagesForProxy.fromSlice(in.body);
     match (msg) {
         TakeWalletAddress => {
             var storage = lazy ProxyStorage.load();
-            assert (in.senderAddress == storage.minter) throw 1543;
+            assert (in.senderAddress == storage.minter) throw SENDER_IS_NOT_THE_DISCOVERY_REQUESTER;
+            // Return discovery result to requester
             val msg = createMessage({
                 dest: storage.discoveryRequester,
                 bounce: false,
@@ -39,20 +23,21 @@ fun onInternalMessage(in: InMessage) {
                 },
             });
 
-            msg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+            msg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY);
         }
-
+        // will be triggered on deployment
         else => {
             var storage = lazy ProxyStorage.load();
-            assert (in.senderAddress == storage.discoveryRequester) throw 11580;
+            assert (in.senderAddress == storage.discoveryRequester) throw SENDER_IS_NOT_THE_MINTER;
             val msg = createMessage({
                 dest: storage.minter,
-                bounce: true,
+                bounce: true, // So we can save some tons (we won't pay storage fees for JettonMaster)
                 value: 0,
                 body: ProvideWalletAddress {
                     queryId: 0,
                     ownerAddress: storage.discoveryRequester,
-                    includeAddress: false,
+                    // We could ask to provide address, but it is cheaper to store it in data
+                    includeAddress: false, 
                 },
             });
 
@@ -62,6 +47,7 @@ fun onInternalMessage(in: InMessage) {
 }
 
 fun onBouncedMessage(in: InMessageBounced) {
+    // handle failed discovery request
     in.bouncedBody.skipBouncedPrefix();
 
     val msg = lazy ProvideWalletAddress.fromSlice(in.bouncedBody);
@@ -79,8 +65,4 @@ fun onBouncedMessage(in: InMessageBounced) {
     });
 
     bounceMsg.send(SEND_MODE_CARRY_ALL_BALANCE | SEND_MODE_DESTROY);
-}
-
-get fun checker(): bool {
-    return true;
 }

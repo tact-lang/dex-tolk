@@ -150,7 +150,7 @@ struct ProxyStorage {
     discoveryRequester: address
     expectedJettonWallet: address
     action: Cell<JettonTransferNotificationWithVaultAction>
-    discoveryId: uint64
+    discoveryId: uint64  // Unique discovery ID (salt)
 }
 
 fun ProxyStorage.load() {
