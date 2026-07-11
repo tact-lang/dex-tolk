@@ -206,3 +206,24 @@ fun JettonTransferNotificationWithVaultAction.refundWithError(self, sender: addr
     commitContractDataAndActions();
     throw error;
 }
+
+struct (0x7a1267fd) TEP89DiscoveryResult {
+    discoveryId: uint64
+    expectedJettonWallet: address
+    actualJettonWallet: address?
+    action: Cell<JettonTransferNotificationWithVaultAction>
+}
+
+struct (0xd1735400) TakeWalletAddress {
+    queryId: uint64
+    jettonWalletAddress: address?
+    ownerAddress: Cell<address>?
+}
+
+struct (0x2c76b973) ProvideWalletAddress {
+    queryId: uint64
+    ownerAddress: address
+    includeAddress: bool
+}
+
+type AllowedMessagesForProxy = TakeWalletAddress

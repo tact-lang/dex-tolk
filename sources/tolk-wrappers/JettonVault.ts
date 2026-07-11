@@ -23,6 +23,7 @@ export type JettonVaultConfig = {
     ammPoolCode: Cell
     liquidityDepositContractCode: Cell
     jettonWalletCode: Cell
+    proxyCodeCell: Cell
 }
 
 export type NoProof = {
@@ -57,6 +58,7 @@ export function jettonVaultConfigToCell(config: JettonVaultConfig): Cell {
         .storeRef(config.ammPoolCode)
         .storeRef(config.liquidityDepositContractCode)
         .storeRef(config.jettonWalletCode)
+        .storeRef(config.proxyCodeCell)
         .endCell()
 }
 

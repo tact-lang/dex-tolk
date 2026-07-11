@@ -12,6 +12,8 @@ struct JettonVaultStorage {
     ammPoolCode: cell
     liquidityDepositContractCode: cell
     jettonWalletCode: cell
+    // TEP89 proof check proxy code
+    proxyCode: cell
 }
 
 fun JettonVaultStorage.load() {
@@ -42,7 +44,13 @@ fun onInternalMessage(in: InMessage) {
             if (storage.jettonWallet == null) {
                 // TODO: handle proofs
                 try {
-                    checkProof(msg.jettonVaultPayload.proof, storage.jettonMaster, in.senderAddress);
+                    checkProof(
+                        msg.jettonVaultPayload.proof,
+                        storage.jettonMaster,
+                        in.senderAddress,
+                        msg.toCell(),
+                        storage.proxyCode
+                    );
                 } catch (error) {
                     // refund if error
                     msg.refundWithError(in.senderAddress, error);

@@ -72,6 +72,7 @@ export const createJettonVaultContract = async (jettonMaster: Address) => {
             ammPoolCode: dex["amm-pool"],
             liquidityDepositContractCode: dex["liquidity-deposit"],
             jettonWalletCode: dex["lp-jetton-wallet"],
+            proxyCodeCell: dex["tep89-proxy"],
         },
         dex["jetton-vault"],
     )
